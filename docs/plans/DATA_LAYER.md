@@ -106,7 +106,7 @@ trait StateStore      { /* in-mem now; Redis/NATS impl later */ }
 ```
 ingest ─▶ update in-mem WorldState ─▶ brain decides ─▶ simulate ─▶ submit
    │                  │                                              │
-   └──────────────────┴───────────── (async, non-blocking) ─────────┘
+   └──────────────────┴───────────── (async, non-blocking) ──────────┘
                                   ▼
                         write task: event log + market TS + periodic snapshot
                                   ▼
