@@ -103,29 +103,29 @@ crates/
 ```
 
 ```
-        ┌────────── intel-registry (curated, HUMAN-GATED capital targets) ──────────┐
+        ┌────────── intel-registry (curated, HUMAN-GATED capital targets) ────────────┐
         │   protocols · contracts · markets · trust tier · watch flag · target flag   │
-        └───────────────┬───────────────────────────────────────┬───────────────────┘
-                watch set│                            capital-target set│
-        ┌────────────────┼───────────────┐                         │
+        └───────────────┬───────────────────────────────────────┬─────────────────────┘
+                watch set│                            capital-target set
+        ┌────────────────┼───────────────┐                          │
         ▼                ▼               ▼                          ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐         brain (deploys only
+┌──────────────┐ ┌──────────────┐ ┌───────────────┐         brain (deploys only
 │ intel-monitor│ │ intel-sources│ │ intel-scenario│        into promoted targets)
 │ tier-1 state │ │ tier-2/3     │ │ what-if sim   │
 │ + signals    │ │ enrichment   │ │               │
-└──────┬───────┘ └──────┬───────┘ └──────┬───────┘
+└──────┬───────┘ └──────┬───────┘ └──────┬────────┘
        │ state_ts       │ enrich         │ scenario_runs
        ▼                ▼                ▼
-   ┌────────────────────────────────────────┐
+   ┌──────────────────────────────────────────┐
    │      DATA STORE (the accumulated record) │
-   └───────────────────┬─────────────────────┘
+   └───────────────────┬──────────────────────┘
                        │ reads history
                        ▼
-              ┌──────────────────┐      signals ─▶ safety plane
-              │  intel-scoring    │
+              ┌────────────────────┐      signals ─▶ safety plane
+              │  intel-scoring     │
               │  rank opportunities│──▶ ranked candidates ─▶ YOU triage ─▶ promote
               │  (versioned models)│                          (back into registry)
-              └──────────────────┘
+              └────────────────────┘
 ```
 
 ---
