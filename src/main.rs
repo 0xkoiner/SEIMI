@@ -1,4 +1,4 @@
-use SEIMI::global_clients::public_client::PublicClient;
+use SEIMI::client::public_client::PublicClient;
 
 #[tokio::main]
 async fn main() {
