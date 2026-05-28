@@ -11,12 +11,13 @@ async fn main() {
         .await
         .expect("Failed to connect to database");
     println!("Database connection established: {:#?}", conn);
-   
-    DBEngine::init_db(&conn)
-        .await
-        .expect("Failed to initialize database");
 
-    let user = DBEngine::insert_user(&conn, "neko", "neko@gmail.com")
+    // let _ = &conn.init_db()
+    //     .await
+    //     .expect("Failed to initialize database");
+
+    let user = &conn
+        .insert_user("neko", "neko2@gmail.com")
         .await
         .expect("Failed to insert user");
     println!("Inserted user {:#?}", user);

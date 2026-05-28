@@ -1,5 +1,7 @@
 use dotenvy::dotenv;
-use sqlx::{postgres::PgPoolOptions, query, query_as, Pool, Postgres, Transaction};
+use sqlx::postgres::{PgArguments, PgPoolOptions, PgRow};
+use sqlx::query::QueryAs;
+use sqlx::{FromRow, Pool, Postgres, Transaction, query, query_as};
 
 use crate::db::types::schema::Users;
 
@@ -44,44 +46,34 @@ impl DBEngine {
         Ok(())
     }
 
-    pub async fn insert_user(
-        &self,
-        name: &str,
-        email: &str,
-    ) -> Result<Users, sqlx::Error> {
-        let mut tx = self.tx().await.expect("Failed to begin transaction");
+    async fn insert<T, F>(&self, sql: &'static str, bind: F) -> Result<T, sqlx::Error>
+    where
+        T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
+        F: FnOnce(
+            QueryAs<'static, Postgres, T, PgArguments>,
+        ) -> QueryAs<'static, Postgres, T, PgArguments>,
+    {
+        let mut tx = self.pool.begin().await?;
 
-        let insert_res = query_as::<_, Users>(
-            "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email",
-        )
-        .bind(name)
-        .bind(email)
-        .fetch_one(&mut *tx)
-        .await;
+        let result = bind(query_as::<_, T>(sql)).fetch_one(&mut *tx).await;
 
-        if let Err(e) = insert_res {
-            println!("Failed to insert user: {e}");
-            let _ = tx.rollback().await;
-            return Err(e);
-        }
-
-        let query_res = query_as::<_, Users>("SELECT id, name, email FROM users WHERE email = $1")
-            .bind(email)
-            .fetch_one(&mut *tx)
-            .await;
-
-        match query_res {
-            Ok(user) => {
-                println!("Queried user: {:#?}", &user);
+        match result {
+            Ok(row) => {
                 tx.commit().await?;
-                Ok(user)
+                Ok(row)
             }
             Err(e) => {
-                println!("Failed to query user after insertion: {e}");
                 let _ = tx.rollback().await;
                 Err(e)
             }
         }
+    }
 
+    pub async fn insert_user(&self, name: &str, email: &str) -> Result<Users, sqlx::Error> {
+        self.insert(
+            "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email",
+            |q| q.bind(name.to_owned()).bind(email.to_owned()),
+        )
+        .await
     }
 }

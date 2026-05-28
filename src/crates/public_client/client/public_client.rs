@@ -2,16 +2,16 @@ use std::borrow::Cow;
 use std::fmt::Display;
 
 use alloy::eips::BlockNumberOrTag;
-use alloy::transports::http::reqwest::Url;
-use alloy::signers::local::PrivateKeySigner;
 use alloy::primitives::{Address, B256, Bytes, U256};
 use alloy::providers::{DynProvider, Provider, ProviderBuilder};
 use alloy::rpc::types::{Block, Filter, Log, TransactionReceipt, TransactionRequest};
+use alloy::signers::local::PrivateKeySigner;
+use alloy::transports::http::reqwest::Url;
 
-use crate::public_client::types::errors::PublicClientError;
-use crate::public_client::utils::init_rpc::{config, get_rpc};
 pub use crate::public_client::types::config::PublicClient;
 use crate::public_client::types::config::RpcConfig;
+use crate::public_client::types::errors::PublicClientError;
+use crate::public_client::utils::init_rpc::{config, get_rpc};
 
 fn map_provider_err(e: impl Display) -> PublicClientError {
     PublicClientError::ProviderError(e.to_string())
