@@ -12,13 +12,19 @@ async fn main() {
         .expect("Failed to connect to database");
     println!("Database connection established: {:#?}", conn);
 
-    // let _ = &conn.init_db()
-    //     .await
-    //     .expect("Failed to initialize database");
+    let _ = &conn.init_db()
+        .await
+        .expect("Failed to initialize database");
 
     let user = &conn
         .insert_user("neko", "neko2@gmail.com")
         .await
         .expect("Failed to insert user");
     println!("Inserted user {:#?}", user);
+
+    let db_all = &conn.read_all().await.expect("Failed to read DB");
+
+    for user in db_all.iter() {
+        println!("User: {:#?}", user);
+    }
 }

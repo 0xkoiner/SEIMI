@@ -76,4 +76,15 @@ impl DBEngine {
         )
         .await
     }
+
+    async fn read<T>(&self, sql: &'static str) -> Result<Vec<T>, sqlx::Error>
+    where
+        T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
+    {
+        query_as::<_, T>(sql).fetch_all(&self.pool).await
+    }
+
+    pub async fn read_all(&self) -> Result<Vec<Users>, sqlx::Error> {
+        self.read::<Users>("SELECT * FROM users").await
+    }
 }
