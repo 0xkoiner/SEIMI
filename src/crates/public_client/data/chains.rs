@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use crate::types::config::Chain;
+use crate::public_client::types::config::Chain;
 
 impl Chain {
     pub const COUNT: usize = 25;

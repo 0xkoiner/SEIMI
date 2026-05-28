@@ -1,9 +1,9 @@
 use std::sync::OnceLock;
 use std::collections::HashMap;
 
-use crate::types::errors::RpcError;
-use crate::types::config::RpcConfig;
-use crate::types::constants::Constants;
+use crate::public_client::types::errors::RpcError;
+use crate::public_client::types::config::RpcConfig;
+use crate::public_client::types::constants::Constants;
 
 static RPC_CONFIG: OnceLock<RpcConfig> = OnceLock::new();
 

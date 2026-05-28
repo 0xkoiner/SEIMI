@@ -8,10 +8,10 @@ use alloy::primitives::{Address, B256, Bytes, U256};
 use alloy::providers::{DynProvider, Provider, ProviderBuilder};
 use alloy::rpc::types::{Block, Filter, Log, TransactionReceipt, TransactionRequest};
 
-use crate::types::errors::PublicClientError;
-use crate::utils::init_rpc::{config, get_rpc};
-pub use crate::types::config::PublicClient;
-use crate::types::config::RpcConfig;
+use crate::public_client::types::errors::PublicClientError;
+use crate::public_client::utils::init_rpc::{config, get_rpc};
+pub use crate::public_client::types::config::PublicClient;
+use crate::public_client::types::config::RpcConfig;
 
 fn map_provider_err(e: impl Display) -> PublicClientError {
     PublicClientError::ProviderError(e.to_string())
