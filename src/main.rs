@@ -17,7 +17,7 @@ async fn main() {
         .expect("Failed to initialize database");
 
     let user = &conn
-        .insert_user("neko", "neko2@gmail.com")
+        .insert_user("neko", "neko4@gmail.com")
         .await
         .expect("Failed to insert user");
     println!("Inserted user {:#?}", user);
@@ -27,4 +27,7 @@ async fn main() {
     for user in db_all.iter() {
         println!("User: {:#?}", user);
     }
+
+    let db_signle = &conn.read_by_id(1).await.expect("Failed to read single user");
+    println!("Single user: {:#?}", db_signle);  
 }

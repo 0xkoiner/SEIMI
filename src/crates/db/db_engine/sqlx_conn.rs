@@ -77,14 +77,32 @@ impl DBEngine {
         .await
     }
 
-    async fn read<T>(&self, sql: &'static str) -> Result<Vec<T>, sqlx::Error>
+    async fn full_read<T, F>(&self, sql: &'static str, bind: F) -> Result<Vec<T>, sqlx::Error>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
+        F: FnOnce(
+            QueryAs<'static, Postgres, T, PgArguments>,
+        ) -> QueryAs<'static, Postgres, T, PgArguments>,
     {
-        query_as::<_, T>(sql).fetch_all(&self.pool).await
+        bind(query_as::<_, T>(sql)).fetch_all(&self.pool).await
+    }
+
+    async fn single_read<T, F>(&self, sql: &'static str, bind: F) -> Result<T, sqlx::Error>
+    where
+        T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
+        F: FnOnce(
+            QueryAs<'static, Postgres, T, PgArguments>,
+        ) -> QueryAs<'static, Postgres, T, PgArguments>,
+    {
+        bind(query_as::<_, T>(sql)).fetch_one(&self.pool).await
     }
 
     pub async fn read_all(&self) -> Result<Vec<Users>, sqlx::Error> {
-        self.read::<Users>("SELECT * FROM users").await
+        self.full_read::<Users, _>("SELECT * FROM users", |q| q).await
+    }
+
+    pub async fn read_by_id(&self, id: i64) -> Result<Users, sqlx::Error> {
+        self.single_read::<Users, _>("SELECT * FROM users WHERE id = $1", |q| q.bind(id))
+            .await
     }
 }
