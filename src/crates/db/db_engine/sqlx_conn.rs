@@ -1,6 +1,6 @@
 use dotenvy::dotenv;
 use sqlx::postgres::{PgArguments, PgPoolOptions, PgRow};
-use sqlx::query::QueryAs;
+use sqlx::query::{Query, QueryAs};
 use sqlx::{FromRow, Pool, Postgres, Transaction, query, query_as};
 
 use crate::db::types::schema::Users;
@@ -46,7 +46,7 @@ impl DBEngine {
         Ok(())
     }
 
-    async fn insert<T, F>(&self, sql: &'static str, bind: F) -> Result<T, sqlx::Error>
+    async fn mutate_one<T, F>(&self, sql: &'static str, bind: F) -> Result<T, sqlx::Error>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
         F: FnOnce(
@@ -70,9 +70,22 @@ impl DBEngine {
     }
 
     pub async fn insert_user(&self, name: &str, email: &str) -> Result<Users, sqlx::Error> {
-        self.insert(
+        self.mutate_one(
             "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email",
             |q| q.bind(name.to_owned()).bind(email.to_owned()),
+        )
+        .await
+    }
+
+    pub async fn update_user(
+        &self,
+        id: i64,
+        name: &str,
+        email: &str,
+    ) -> Result<Users, sqlx::Error> {
+        self.mutate_one(
+            "UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email",
+            |q| q.bind(name.to_owned()).bind(email.to_owned()).bind(id),
         )
         .await
     }
@@ -98,11 +111,37 @@ impl DBEngine {
     }
 
     pub async fn read_all(&self) -> Result<Vec<Users>, sqlx::Error> {
-        self.full_read::<Users, _>("SELECT * FROM users", |q| q).await
+        self.full_read::<Users, _>("SELECT * FROM users", |q| q)
+            .await
     }
 
     pub async fn read_by_id(&self, id: i64) -> Result<Users, sqlx::Error> {
         self.single_read::<Users, _>("SELECT * FROM users WHERE id = $1", |q| q.bind(id))
+            .await
+    }
+
+    async fn delete<F>(&self, sql: &'static str, bind: F) -> Result<u64, sqlx::Error>
+    where
+        F: FnOnce(Query<'static, Postgres, PgArguments>) -> Query<'static, Postgres, PgArguments>,
+    {
+        let mut tx = self.pool.begin().await?;
+
+        let result = bind(query(sql)).execute(&mut *tx).await;
+
+        match result {
+            Ok(done) => {
+                tx.commit().await?;
+                Ok(done.rows_affected())
+            }
+            Err(e) => {
+                let _ = tx.rollback().await;
+                Err(e)
+            }
+        }
+    }
+
+    pub async fn delete_by_id(&self, id: i64) -> Result<u64, sqlx::Error> {
+        self.delete("DELETE FROM users WHERE id = $1", |q| q.bind(id))
             .await
     }
 }
