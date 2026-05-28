@@ -1,12 +1,11 @@
-use std::sync::OnceLock;
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
-use crate::global_types::errors::RpcError;
-use crate::global_types::config::RpcConfig;
-use crate::global_types::constants::Constants;
+use crate::public_client::types::config::RpcConfig;
+use crate::public_client::types::constants::Constants;
+use crate::public_client::types::errors::RpcError;
 
 static RPC_CONFIG: OnceLock<RpcConfig> = OnceLock::new();
-
 
 pub fn config() -> &'static RpcConfig {
     RPC_CONFIG.get_or_init(|| load_config().expect("Failed to parse embedded RPC config"))

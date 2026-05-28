@@ -1,5 +1,5 @@
-use std::borrow::Cow;
 use serde::Deserialize;
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use alloy::providers::DynProvider;
