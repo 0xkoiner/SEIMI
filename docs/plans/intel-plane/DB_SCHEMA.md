@@ -51,8 +51,8 @@ CREATE TABLE protocols (
     abi_ref     TEXT,                          -- reference to ABI (see §5: a KEY, not a blob)
     watch       INTEGER NOT NULL DEFAULT 1,    -- monitor gathers data on it (bool)
     capital_target INTEGER NOT NULL DEFAULT 0, -- brain may deploy here — HUMAN-SET ONLY (bool)
-    created_at  TEXT NOT NULL,
-    updated_at  TEXT NOT NULL
+    created_at  DATE NOT NULL,
+    updated_at  DATE NOT NULL
 );
 
 -- A chain. One row per chain — NOT a table per chain.
@@ -80,7 +80,7 @@ CREATE TABLE markets (
     address      TEXT NOT NULL,                -- lowercase hex, checksummed at edge
     market_type  TEXT NOT NULL,                -- 'pool' | 'vault' | 'lp' | 'reserve' | ...
     tokens       TEXT NOT NULL,                -- JSON array of token addresses (see §5)
-    created_at   TEXT NOT NULL,
+    created_at   DATE NOT NULL,
     UNIQUE (chain_id, address)                 -- an address is unique per chain
 );
 CREATE INDEX idx_markets_protocol ON markets(protocol_id);

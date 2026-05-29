@@ -1,7 +1,7 @@
 use dotenvy::dotenv;
 use sqlx::postgres::{PgArguments, PgPoolOptions, PgRow};
 use sqlx::query::{Query, QueryAs};
-use sqlx::{FromRow, Pool, Postgres, Transaction, query, query_as};
+use sqlx::{FromRow, Pool, Postgres, Transaction, query, query_as, raw_sql};
 
 use crate::db::types::schema::Users;
 
@@ -29,24 +29,30 @@ impl DBEngine {
     }
 
     pub async fn init_db(&self) -> Result<(), sqlx::Error> {
-        let mut tx = self.tx().await.expect("Failed to begin transaction");
+        let mut tx = self.tx().await?;
 
-        query(
-            "CREATE TABLE IF NOT EXISTS users (
-                id BIGSERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL UNIQUE
-            )",
-        )
-        .execute(&mut *tx)
-        .await?;
+        let result = raw_sql(include_str!("../migrations/create_db.sql"))
+            .execute(&mut *tx)
+            .await;
 
-        tx.commit().await?;
-
-        Ok(())
+        match result {
+            Ok(done) => {
+                println!("Database initialized: {done:#?}");
+                tx.commit().await?;
+                Ok(())
+            }
+            Err(e) => {
+                let _ = tx.rollback().await;
+                Err(e)
+            }
+        }
     }
 
-    async fn mutate_one<T, F>(&self, sql: &'static str, bind: F) -> Result<T, sqlx::Error>
+    pub(crate) async fn mutate_one<T, F>(
+        &self,
+        sql: &'static str,
+        bind: F,
+    ) -> Result<T, sqlx::Error>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
         F: FnOnce(
@@ -90,7 +96,11 @@ impl DBEngine {
         .await
     }
 
-    async fn full_read<T, F>(&self, sql: &'static str, bind: F) -> Result<Vec<T>, sqlx::Error>
+    pub(crate) async fn full_read<T, F>(
+        &self,
+        sql: &'static str,
+        bind: F,
+    ) -> Result<Vec<T>, sqlx::Error>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
         F: FnOnce(
@@ -100,7 +110,11 @@ impl DBEngine {
         bind(query_as::<_, T>(sql)).fetch_all(&self.pool).await
     }
 
-    async fn single_read<T, F>(&self, sql: &'static str, bind: F) -> Result<T, sqlx::Error>
+    pub(crate) async fn single_read<T, F>(
+        &self,
+        sql: &'static str,
+        bind: F,
+    ) -> Result<T, sqlx::Error>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
         F: FnOnce(
@@ -120,7 +134,7 @@ impl DBEngine {
             .await
     }
 
-    async fn delete<F>(&self, sql: &'static str, bind: F) -> Result<u64, sqlx::Error>
+    pub(crate) async fn delete<F>(&self, sql: &'static str, bind: F) -> Result<u64, sqlx::Error>
     where
         F: FnOnce(Query<'static, Postgres, PgArguments>) -> Query<'static, Postgres, PgArguments>,
     {

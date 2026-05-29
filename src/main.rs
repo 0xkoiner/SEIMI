@@ -14,33 +14,57 @@ async fn main() {
 
     let _ = &conn.init_db().await.expect("Failed to initialize database");
 
-    let user = &conn
-        .insert_user("neko", "neko6@gmail.com")
+    let protocol = &conn
+        .insert_protocols("AAVE4", "AAVE-V4", "Lending", None)
         .await
-        .expect("Failed to insert user");
-    println!("Inserted user {:#?}", user);
+        .expect("Failed to insert protocol");
+    println!("Inserted protocol {:#?}", protocol);
 
-    let db_all = &conn.read_all().await.expect("Failed to read DB");
-
-    for user in db_all.iter() {
-        println!("User: {:#?}", user);
-    }
-
-    let db_signle = &conn
-        .read_by_id(1)
+    let chain = &conn
+        .insert_chains("AVA", 13)
         .await
-        .expect("Failed to read single user");
-    println!("Single user: {:#?}", db_signle);
+        .expect("Failed to insert chain");
+    println!("Inserted chain {:#?}", chain);
 
-    let updated = conn
-        .update_user(2, "neo", "neo@example.com")
+    let protocol_chain = &conn
+        .insert_protocol_chains(protocol.id, chain.id)
         .await
-        .expect("Failed to update user");
-    println!("Updated user {:#?}", updated);
+        .expect("Failed to insert protocol_chain");
+    println!("Inserted protocol_chain {:#?}", protocol_chain);
 
-    // let deleted = conn.delete_by_id(9).await.expect("Failed to delete user");
-    // println!("Deleted {deleted} row(s) with id 1");
+    let markets = &conn
+        .insert_markets(
+            protocol.id,
+            chain.id,
+            "0x000000000001",
+            "lending",
+            "0x000000000001,0x000000000002",
+        )
+        .await
+        .expect("Failed to insert markets");
+    println!("Inserted markets {:#?}", markets);
 
-    //  let db_all_after_delete = &conn.read_all().await.expect("Failed to read DB after delete");
-    //  println!("All users after delete: {:#?}", db_all_after_delete);
+    let market_metrics_ts = &conn
+        .insert_market_metrics_ts(markets.id, 20, 30, 40, 50, "my granny", "good-one")
+        .await
+        .expect("Failed to insert market_metrics_ts");
+    println!("Inserted market_metrics_ts {:#?}", market_metrics_ts);
+
+    let protocol_metrics_ts = &conn
+        .insert_protocol_metrics_ts(protocol.id, 20, 30, "my granny", "good-one")
+        .await
+        .expect("Failed to insert protocol_metrics_ts");
+    println!("Inserted protocol_metrics_ts {:#?}", protocol_metrics_ts);
+
+    let aggregate_metrics_ts = &conn
+        .insert_aggregate_metrics_ts(20, 30, 40, "my granny", "good-one")
+        .await
+        .expect("Failed to insert aggregate_metrics_ts");
+    println!("Inserted aggregate_metrics_ts {:#?}", aggregate_metrics_ts);
+
+    let volume_rollups = &conn
+        .insert_volume_rollups("scope", 1, "window", 60)
+        .await
+        .expect("Failed to insert volume_rollups");
+    println!("Inserted volume_rollups {:#?}", volume_rollups);
 }
