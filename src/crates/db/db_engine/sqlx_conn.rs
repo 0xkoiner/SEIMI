@@ -1,7 +1,7 @@
 use dotenvy::dotenv;
 use sqlx::postgres::{PgArguments, PgPoolOptions, PgRow};
 use sqlx::query::{Query, QueryAs};
-use sqlx::{FromRow, Pool, Postgres, Transaction, query, query_as, query_file};
+use sqlx::{FromRow, Pool, Postgres, Transaction, query, query_as, raw_sql};
 
 use crate::db::types::schema::Users;
 
@@ -31,7 +31,7 @@ impl DBEngine {
     pub async fn init_db(&self) -> Result<(), sqlx::Error> {
         let mut tx = self.tx().await?;
 
-        let result = query_file!("src/crates/db/migrations/create_db.sql")
+        let result = raw_sql(include_str!("../migrations/create_db.sql"))
             .execute(&mut *tx)
             .await;
 
