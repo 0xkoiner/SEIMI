@@ -14,29 +14,29 @@ async fn main() {
 
     let _ = &conn.init_db().await.expect("Failed to initialize database");
 
-    let user = &conn
-        .insert_user("neko", "neko6@gmail.com")
-        .await
-        .expect("Failed to insert user");
-    println!("Inserted user {:#?}", user);
+    // let user = &conn
+    //     .insert_user("neko", "neko@gmail.com")
+    //     .await
+    //     .expect("Failed to insert user");
+    // println!("Inserted user {:#?}", user);
 
-    let db_all = &conn.read_all().await.expect("Failed to read DB");
+    // let db_all = &conn.read_all().await.expect("Failed to read DB");
 
-    for user in db_all.iter() {
-        println!("User: {:#?}", user);
-    }
+    // for user in db_all.iter() {
+    //     println!("User: {:#?}", user);
+    // }
 
-    let db_signle = &conn
-        .read_by_id(1)
-        .await
-        .expect("Failed to read single user");
-    println!("Single user: {:#?}", db_signle);
+    // let db_signle = &conn
+    //     .read_by_id(1)
+    //     .await
+    //     .expect("Failed to read single user");
+    // println!("Single user: {:#?}", db_signle);
 
-    let updated = conn
-        .update_user(2, "neo", "neo@example.com")
-        .await
-        .expect("Failed to update user");
-    println!("Updated user {:#?}", updated);
+    // let updated = conn
+    //     .update_user(2, "neo", "neo@example.com")
+    //     .await
+    //     .expect("Failed to update user");
+    // println!("Updated user {:#?}", updated);
 
     // let deleted = conn.delete_by_id(9).await.expect("Failed to delete user");
     // println!("Deleted {deleted} row(s) with id 1");

@@ -1,7 +1,7 @@
 use dotenvy::dotenv;
 use sqlx::postgres::{PgArguments, PgPoolOptions, PgRow};
 use sqlx::query::{Query, QueryAs};
-use sqlx::{FromRow, Pool, Postgres, Transaction, query, query_as};
+use sqlx::{FromRow, Pool, Postgres, Transaction, query, query_as, query_file};
 
 use crate::db::types::schema::Users;
 
@@ -29,21 +29,23 @@ impl DBEngine {
     }
 
     pub async fn init_db(&self) -> Result<(), sqlx::Error> {
-        let mut tx = self.tx().await.expect("Failed to begin transaction");
+        let mut tx = self.tx().await?;
 
-        query(
-            "CREATE TABLE IF NOT EXISTS users (
-                id BIGSERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL UNIQUE
-            )",
-        )
-        .execute(&mut *tx)
-        .await?;
+        let result = query_file!("src/crates/db/migrations/create_db.sql")
+            .execute(&mut *tx)
+            .await;
 
-        tx.commit().await?;
-
-        Ok(())
+        match result {
+            Ok(done) => {
+                println!("Database initialized: {done:#?}");
+                tx.commit().await?;
+                Ok(())
+            }
+            Err(e) => {
+                let _ = tx.rollback().await;
+                Err(e)
+            }
+        }
     }
 
     async fn mutate_one<T, F>(&self, sql: &'static str, bind: F) -> Result<T, sqlx::Error>
