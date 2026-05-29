@@ -48,7 +48,11 @@ impl DBEngine {
         }
     }
 
-    async fn mutate_one<T, F>(&self, sql: &'static str, bind: F) -> Result<T, sqlx::Error>
+    pub(crate) async fn mutate_one<T, F>(
+        &self,
+        sql: &'static str,
+        bind: F,
+    ) -> Result<T, sqlx::Error>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
         F: FnOnce(
@@ -92,7 +96,11 @@ impl DBEngine {
         .await
     }
 
-    async fn full_read<T, F>(&self, sql: &'static str, bind: F) -> Result<Vec<T>, sqlx::Error>
+    pub(crate) async fn full_read<T, F>(
+        &self,
+        sql: &'static str,
+        bind: F,
+    ) -> Result<Vec<T>, sqlx::Error>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
         F: FnOnce(
@@ -102,7 +110,11 @@ impl DBEngine {
         bind(query_as::<_, T>(sql)).fetch_all(&self.pool).await
     }
 
-    async fn single_read<T, F>(&self, sql: &'static str, bind: F) -> Result<T, sqlx::Error>
+    pub(crate) async fn single_read<T, F>(
+        &self,
+        sql: &'static str,
+        bind: F,
+    ) -> Result<T, sqlx::Error>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
         F: FnOnce(
@@ -122,7 +134,7 @@ impl DBEngine {
             .await
     }
 
-    async fn delete<F>(&self, sql: &'static str, bind: F) -> Result<u64, sqlx::Error>
+    pub(crate) async fn delete<F>(&self, sql: &'static str, bind: F) -> Result<u64, sqlx::Error>
     where
         F: FnOnce(Query<'static, Postgres, PgArguments>) -> Query<'static, Postgres, PgArguments>,
     {
