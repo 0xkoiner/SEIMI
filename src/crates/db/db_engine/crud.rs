@@ -408,4 +408,155 @@ impl DBEngine {
         )
         .await
     }
+
+    pub async fn update_protocols(
+        &self,
+        id: i64,
+        display_name: &str,
+        category: &str,
+        abi_ref: Option<&str>,
+    ) -> Result<Protocols, sqlx::Error> {
+        let now = Utc::now();
+        self.mutate_one(
+            "UPDATE protocols SET display_name = $1, category = $2, abi_ref = $3, updated_at = $4 \
+             WHERE id = $5 \
+             RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
+            |q| {
+                q.bind(display_name.to_owned())
+                    .bind(category.to_owned())
+                    .bind(abi_ref.map(|s| s.to_owned()))
+                    .bind(now)
+                    .bind(id)
+            },
+        )
+        .await
+    }
+
+    pub async fn update_protocol_watch(
+        &self,
+        id: i64,
+        watch: bool,
+    ) -> Result<Protocols, sqlx::Error> {
+        let now = Utc::now();
+        self.mutate_one(
+            "UPDATE protocols SET watch = $1, updated_at = $2 WHERE id = $3 \
+             RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
+            |q| q.bind(watch).bind(now).bind(id),
+        )
+        .await
+    }
+
+    pub async fn update_protocol_capital_target(
+        &self,
+        id: i64,
+        capital_target: bool,
+    ) -> Result<Protocols, sqlx::Error> {
+        let now = Utc::now();
+        self.mutate_one(
+            "UPDATE protocols SET capital_target = $1, updated_at = $2 WHERE id = $3 \
+             RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
+            |q| q.bind(capital_target).bind(now).bind(id),
+        )
+        .await
+    }
+
+    pub async fn update_chains(&self, id: i64, name: &str) -> Result<Chains, sqlx::Error> {
+        self.mutate_one(
+            "UPDATE chains SET name = $1 WHERE id = $2 RETURNING id, name, chain_id",
+            |q| q.bind(name.to_owned()).bind(id),
+        )
+        .await
+    }
+
+    pub async fn update_markets(
+        &self,
+        id: i64,
+        market_type: &str,
+        tokens: &str,
+    ) -> Result<Markets, sqlx::Error> {
+        self.mutate_one(
+            "UPDATE markets SET market_type = $1, tokens = $2 WHERE id = $3 \
+             RETURNING id, protocol_id, chain_id, address, market_type, tokens, created_at",
+            |q| {
+                q.bind(market_type.to_owned())
+                    .bind(tokens.to_owned())
+                    .bind(id)
+            },
+        )
+        .await
+    }
+
+    pub async fn update_volume_rollups(
+        &self,
+        scope: &str,
+        scope_id: i64,
+        window_label: &str,
+        volume_base: i64,
+    ) -> Result<VolumeRollups, sqlx::Error> {
+        let now = Utc::now();
+        self.mutate_one(
+            "UPDATE volume_rollups SET volume_base = $1, computed_at = $2 \
+             WHERE scope = $3 AND scope_id = $4 AND window_label = $5 \
+             RETURNING scope, scope_id, window_label, volume_base, computed_at",
+            |q| {
+                q.bind(volume_base)
+                    .bind(now)
+                    .bind(scope.to_owned())
+                    .bind(scope_id)
+                    .bind(window_label.to_owned())
+            },
+        )
+        .await
+    }
+
+    pub async fn delete_protocols_by_id(&self, id: i64) -> Result<u64, sqlx::Error> {
+        self.delete("DELETE FROM protocols WHERE id = $1", |q| q.bind(id))
+            .await
+    }
+
+    pub async fn delete_chains_by_id(&self, id: i64) -> Result<u64, sqlx::Error> {
+        self.delete("DELETE FROM chains WHERE id = $1", |q| q.bind(id))
+            .await
+    }
+
+    pub async fn delete_markets_by_id(&self, id: i64) -> Result<u64, sqlx::Error> {
+        self.delete("DELETE FROM markets WHERE id = $1", |q| q.bind(id))
+            .await
+    }
+
+    pub async fn delete_protocol_chains(
+        &self,
+        protocol_id: i64,
+        chain_id: i64,
+    ) -> Result<u64, sqlx::Error> {
+        self.delete(
+            "DELETE FROM protocol_chains WHERE protocol_id = $1 AND chain_id = $2",
+            |q| q.bind(protocol_id).bind(chain_id),
+        )
+        .await
+    }
+
+    pub async fn delete_volume_rollups(
+        &self,
+        scope: &str,
+        scope_id: i64,
+        window_label: &str,
+    ) -> Result<u64, sqlx::Error> {
+        self.delete(
+            "DELETE FROM volume_rollups WHERE scope = $1 AND scope_id = $2 AND window_label = $3",
+            |q| q.bind(scope.to_owned()).bind(scope_id).bind(window_label.to_owned()),
+        )
+        .await
+    }
+
+    pub async fn delete_all_tables(&self) -> Result<u64, sqlx::Error> {
+        self.delete(
+            "TRUNCATE TABLE \
+             aggregate_metrics_ts, protocol_metrics_ts, market_metrics_ts, \
+             markets, protocol_chains, chains, protocols, volume_rollups \
+             RESTART IDENTITY CASCADE",
+            |q| q,
+        )
+        .await
+    }
 }

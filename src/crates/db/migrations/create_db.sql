@@ -17,15 +17,15 @@ CREATE TABLE IF NOT EXISTS chains (
 );
 
 CREATE TABLE IF NOT EXISTS protocol_chains (
-    protocol_id BIGINT NOT NULL REFERENCES protocols(id),
-    chain_id BIGINT NOT NULL REFERENCES chains(id),
+    protocol_id BIGINT NOT NULL REFERENCES protocols(id) ON DELETE CASCADE,
+    chain_id BIGINT NOT NULL REFERENCES chains(id) ON DELETE CASCADE,
     PRIMARY KEY (protocol_id, chain_id)
 );
 
 CREATE TABLE IF NOT EXISTS markets (
     id BIGSERIAL PRIMARY KEY,
-    protocol_id BIGINT NOT NULL REFERENCES protocols(id),
-    chain_id BIGINT NOT NULL REFERENCES chains(id),
+    protocol_id BIGINT NOT NULL REFERENCES protocols(id) ON DELETE CASCADE,
+    chain_id BIGINT NOT NULL REFERENCES chains(id) ON DELETE CASCADE,
     address TEXT NOT NULL,
     market_type VARCHAR(50) NOT NULL,
     tokens TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS markets (
 
 CREATE TABLE IF NOT EXISTS market_metrics_ts (
     id BIGSERIAL PRIMARY KEY,
-    market_id BIGINT NOT NULL REFERENCES markets(id),
+    market_id BIGINT NOT NULL REFERENCES markets(id) ON DELETE CASCADE,
     observed_at TIMESTAMPTZ NOT NULL,
     tvl_base NUMERIC(78,0) NOT NULL,
     volume_base NUMERIC(78,0) NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS market_metrics_ts (
 
 CREATE TABLE IF NOT EXISTS protocol_metrics_ts (
     id BIGSERIAL PRIMARY KEY,
-    protocol_id BIGINT NOT NULL REFERENCES protocols(id),
+    protocol_id BIGINT NOT NULL REFERENCES protocols(id) ON DELETE CASCADE,
     observed_at TIMESTAMPTZ NOT NULL,
     tvl_base NUMERIC(78,0) NOT NULL,
     volume_base NUMERIC(78,0) NOT NULL,
@@ -79,3 +79,27 @@ CREATE INDEX IF NOT EXISTS idx_markets_chain    ON markets(chain_id);
 CREATE INDEX IF NOT EXISTS idx_mkt_ts   ON market_metrics_ts(market_id, observed_at);
 CREATE INDEX IF NOT EXISTS idx_proto_ts ON protocol_metrics_ts(protocol_id, observed_at);
 CREATE INDEX IF NOT EXISTS idx_agg_ts   ON aggregate_metrics_ts(observed_at);
+
+ALTER TABLE protocol_chains DROP CONSTRAINT IF EXISTS protocol_chains_protocol_id_fkey;
+ALTER TABLE protocol_chains ADD  CONSTRAINT protocol_chains_protocol_id_fkey
+    FOREIGN KEY (protocol_id) REFERENCES protocols(id) ON DELETE CASCADE;
+
+ALTER TABLE protocol_chains DROP CONSTRAINT IF EXISTS protocol_chains_chain_id_fkey;
+ALTER TABLE protocol_chains ADD  CONSTRAINT protocol_chains_chain_id_fkey
+    FOREIGN KEY (chain_id) REFERENCES chains(id) ON DELETE CASCADE;
+
+ALTER TABLE markets DROP CONSTRAINT IF EXISTS markets_protocol_id_fkey;
+ALTER TABLE markets ADD  CONSTRAINT markets_protocol_id_fkey
+    FOREIGN KEY (protocol_id) REFERENCES protocols(id) ON DELETE CASCADE;
+
+ALTER TABLE markets DROP CONSTRAINT IF EXISTS markets_chain_id_fkey;
+ALTER TABLE markets ADD  CONSTRAINT markets_chain_id_fkey
+    FOREIGN KEY (chain_id) REFERENCES chains(id) ON DELETE CASCADE;
+
+ALTER TABLE market_metrics_ts DROP CONSTRAINT IF EXISTS market_metrics_ts_market_id_fkey;
+ALTER TABLE market_metrics_ts ADD  CONSTRAINT market_metrics_ts_market_id_fkey
+    FOREIGN KEY (market_id) REFERENCES markets(id) ON DELETE CASCADE;
+
+ALTER TABLE protocol_metrics_ts DROP CONSTRAINT IF EXISTS protocol_metrics_ts_protocol_id_fkey;
+ALTER TABLE protocol_metrics_ts ADD  CONSTRAINT protocol_metrics_ts_protocol_id_fkey
+    FOREIGN KEY (protocol_id) REFERENCES protocols(id) ON DELETE CASCADE;
