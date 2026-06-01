@@ -184,4 +184,80 @@ impl DBEngine {
         )
         .await
     }
+
+    pub async fn read_protocols_by_id(&self, id: i64) -> Result<Protocols, sqlx::Error> {
+        self.single_read::<Protocols, _>("SELECT * FROM protocols WHERE id = $1", |q| q.bind(id))
+            .await
+    }
+
+    pub async fn read_protocols_by_name(&self, name: &str) -> Result<Protocols, sqlx::Error> {
+        self.single_read::<Protocols, _>("SELECT * FROM protocols WHERE name = $1", |q| {
+            q.bind(name.to_owned())
+        })
+        .await
+    }
+
+    pub async fn read_chains_by_id(&self, id: i64) -> Result<Chains, sqlx::Error> {
+        self.single_read::<Chains, _>("SELECT * FROM chains WHERE id = $1", |q| q.bind(id))
+            .await
+    }
+
+    pub async fn read_chains_by_name(&self, name: &str) -> Result<Chains, sqlx::Error> {
+        self.single_read::<Chains, _>("SELECT * FROM chains WHERE name = $1", |q| {
+            q.bind(name.to_owned())
+        })
+        .await
+    }
+
+    pub async fn read_chains_by_chain_id(&self, chain_id: i64) -> Result<Chains, sqlx::Error> {
+        self.single_read::<Chains, _>("SELECT * FROM chains WHERE chain_id = $1", |q| {
+            q.bind(chain_id)
+        })
+        .await
+    }
+
+    pub async fn read_protocol_chains_by_protocol_id(&self, protocol_id: i64) -> Result<Vec<ProtocolChains>, sqlx::Error> {
+        self.full_read::<ProtocolChains, _>(
+            "SELECT * FROM protocol_chains WHERE protocol_id = $1",
+            |q| q.bind(protocol_id),
+        )
+        .await
+    }
+
+    pub async fn read_protocol_chains_by_chain_id(&self, chain_id: i64) -> Result<Vec<ProtocolChains>, sqlx::Error> {
+        self.full_read::<ProtocolChains, _>(
+            "SELECT * FROM protocol_chains WHERE chain_id = $1",
+            |q| q.bind(chain_id),
+        )
+        .await
+    }
+
+    pub async fn read_markets_by_id(&self, id: i64) -> Result<Markets, sqlx::Error> {
+        self.single_read::<Markets, _>("SELECT * FROM markets WHERE id = $1", |q| q.bind(id))
+            .await
+    }
+
+    pub async fn read_market_metrics_ts_by_id(&self, id: i64) -> Result<MarketMetricsTs, sqlx::Error> {
+        self.single_read::<MarketMetricsTs, _>(
+            "SELECT * FROM market_metrics_ts WHERE id = $1",
+            |q| q.bind(id),
+        )
+        .await
+    }
+
+    pub async fn read_protocol_metrics_ts_by_id(&self, id: i64) -> Result<ProtocolMetricsTs, sqlx::Error> {
+        self.single_read::<ProtocolMetricsTs, _>(
+            "SELECT * FROM protocol_metrics_ts WHERE id = $1",
+            |q| q.bind(id),
+        )
+        .await
+    }
+
+    pub async fn read_aggregate_metrics_ts_by_id(&self, id: i64) -> Result<AggregateMetricsTs, sqlx::Error> {
+        self.single_read::<AggregateMetricsTs, _>(
+            "SELECT * FROM aggregate_metrics_ts WHERE id = $1",
+            |q| q.bind(id),
+        )
+        .await
+    }
 }
