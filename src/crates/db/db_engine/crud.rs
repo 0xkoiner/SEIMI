@@ -260,4 +260,152 @@ impl DBEngine {
         )
         .await
     }
+
+    pub async fn read_all_protocols(&self) -> Result<Vec<Protocols>, sqlx::Error> {
+        self.full_read::<Protocols, _>("SELECT * FROM protocols", |q| q).await
+    }
+
+    pub async fn read_all_chains(&self) -> Result<Vec<Chains>, sqlx::Error> {
+        self.full_read::<Chains, _>("SELECT * FROM chains", |q| q).await
+    }
+
+    pub async fn read_all_markets(&self) -> Result<Vec<Markets>, sqlx::Error> {
+        self.full_read::<Markets, _>("SELECT * FROM markets", |q| q).await
+    }
+
+    pub async fn read_market_metrics_ts_history(
+        &self,
+        market_id: i64,
+    ) -> Result<Vec<MarketMetricsTs>, sqlx::Error> {
+        self.full_read::<MarketMetricsTs, _>(
+            "SELECT * FROM market_metrics_ts WHERE market_id = $1 ORDER BY observed_at DESC",
+            |q| q.bind(market_id),
+        )
+        .await
+    }
+
+    pub async fn read_protocol_metrics_ts_history(
+        &self,
+        protocol_id: i64,
+    ) -> Result<Vec<ProtocolMetricsTs>, sqlx::Error> {
+        self.full_read::<ProtocolMetricsTs, _>(
+            "SELECT * FROM protocol_metrics_ts WHERE protocol_id = $1 ORDER BY observed_at DESC",
+            |q| q.bind(protocol_id),
+        )
+        .await
+    }
+
+    pub async fn read_aggregate_metrics_ts_history(
+        &self,
+    ) -> Result<Vec<AggregateMetricsTs>, sqlx::Error> {
+        self.full_read::<AggregateMetricsTs, _>(
+            "SELECT * FROM aggregate_metrics_ts ORDER BY observed_at DESC",
+            |q| q,
+        )
+        .await
+    }
+
+    pub async fn read_market_metrics_ts_latest(
+        &self,
+        market_id: i64,
+    ) -> Result<MarketMetricsTs, sqlx::Error> {
+        self.single_read::<MarketMetricsTs, _>(
+            "SELECT * FROM market_metrics_ts WHERE market_id = $1 ORDER BY observed_at DESC LIMIT 1",
+            |q| q.bind(market_id),
+        )
+        .await
+    }
+
+    pub async fn read_protocol_metrics_ts_latest(
+        &self,
+        protocol_id: i64,
+    ) -> Result<ProtocolMetricsTs, sqlx::Error> {
+        self.single_read::<ProtocolMetricsTs, _>(
+            "SELECT * FROM protocol_metrics_ts WHERE protocol_id = $1 ORDER BY observed_at DESC LIMIT 1",
+            |q| q.bind(protocol_id),
+        )
+        .await
+    }
+
+    pub async fn read_aggregate_metrics_ts_latest(
+        &self,
+    ) -> Result<AggregateMetricsTs, sqlx::Error> {
+        self.single_read::<AggregateMetricsTs, _>(
+            "SELECT * FROM aggregate_metrics_ts ORDER BY observed_at DESC LIMIT 1",
+            |q| q,
+        )
+        .await
+    }
+
+    pub async fn read_volume_rollups_by_scope(
+        &self,
+        scope: &str,
+        scope_id: i64,
+    ) -> Result<Vec<VolumeRollups>, sqlx::Error> {
+        self.full_read::<VolumeRollups, _>(
+            "SELECT * FROM volume_rollups WHERE scope = $1 AND scope_id = $2",
+            |q| q.bind(scope.to_owned()).bind(scope_id),
+        )
+        .await
+    }
+
+    pub async fn read_chains_for_protocol(
+        &self,
+        protocol_id: i64,
+    ) -> Result<Vec<Chains>, sqlx::Error> {
+        self.full_read::<Chains, _>(
+            "SELECT c.* FROM chains c \
+             JOIN protocol_chains pc ON pc.chain_id = c.id \
+             WHERE pc.protocol_id = $1",
+            |q| q.bind(protocol_id),
+        )
+        .await
+    }
+
+    pub async fn read_protocols_on_chain(
+        &self,
+        chain_id: i64,
+    ) -> Result<Vec<Protocols>, sqlx::Error> {
+        self.full_read::<Protocols, _>(
+            "SELECT p.* FROM protocols p \
+             JOIN protocol_chains pc ON pc.protocol_id = p.id \
+             WHERE pc.chain_id = $1",
+            |q| q.bind(chain_id),
+        )
+        .await
+    }
+
+    pub async fn read_markets_by_protocol(
+        &self,
+        protocol_id: i64,
+    ) -> Result<Vec<Markets>, sqlx::Error> {
+        self.full_read::<Markets, _>(
+            "SELECT * FROM markets WHERE protocol_id = $1",
+            |q| q.bind(protocol_id),
+        )
+        .await
+    }
+
+    pub async fn read_markets_by_chain(
+        &self,
+        chain_id: i64,
+    ) -> Result<Vec<Markets>, sqlx::Error> {
+        self.full_read::<Markets, _>(
+            "SELECT * FROM markets WHERE chain_id = $1",
+            |q| q.bind(chain_id),
+        )
+        .await
+    }
+
+    pub async fn read_market_by_address(
+        &self,
+        chain_id: i64,
+        address: &str,
+    ) -> Result<Markets, sqlx::Error> {
+        self.single_read::<Markets, _>(
+            "SELECT * FROM markets WHERE chain_id = $1 AND address = $2",
+            |q| q.bind(chain_id).bind(address.to_owned()),
+        )
+        .await
+    }
 }
