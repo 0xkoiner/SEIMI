@@ -17,15 +17,15 @@ CREATE TABLE IF NOT EXISTS chains (
 );
 
 CREATE TABLE IF NOT EXISTS protocol_chains (
-    protocol_id BIGINT NOT NULL REFERENCES protocols(id),
-    chain_id BIGINT NOT NULL REFERENCES chains(id),
+    protocol_id BIGINT NOT NULL REFERENCES protocols(id) ON DELETE CASCADE,
+    chain_id BIGINT NOT NULL REFERENCES chains(id) ON DELETE CASCADE,
     PRIMARY KEY (protocol_id, chain_id)
 );
 
 CREATE TABLE IF NOT EXISTS markets (
     id BIGSERIAL PRIMARY KEY,
-    protocol_id BIGINT NOT NULL REFERENCES protocols(id),
-    chain_id BIGINT NOT NULL REFERENCES chains(id),
+    protocol_id BIGINT NOT NULL REFERENCES protocols(id) ON DELETE CASCADE,
+    chain_id BIGINT NOT NULL REFERENCES chains(id) ON DELETE CASCADE,
     address TEXT NOT NULL,
     market_type VARCHAR(50) NOT NULL,
     tokens TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS markets (
 
 CREATE TABLE IF NOT EXISTS market_metrics_ts (
     id BIGSERIAL PRIMARY KEY,
-    market_id BIGINT NOT NULL REFERENCES markets(id),
+    market_id BIGINT NOT NULL REFERENCES markets(id) ON DELETE CASCADE,
     observed_at TIMESTAMPTZ NOT NULL,
     tvl_base NUMERIC(78,0) NOT NULL,
     volume_base NUMERIC(78,0) NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS market_metrics_ts (
 
 CREATE TABLE IF NOT EXISTS protocol_metrics_ts (
     id BIGSERIAL PRIMARY KEY,
-    protocol_id BIGINT NOT NULL REFERENCES protocols(id),
+    protocol_id BIGINT NOT NULL REFERENCES protocols(id) ON DELETE CASCADE,
     observed_at TIMESTAMPTZ NOT NULL,
     tvl_base NUMERIC(78,0) NOT NULL,
     volume_base NUMERIC(78,0) NOT NULL,
