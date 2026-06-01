@@ -3,6 +3,13 @@ use SEIMI::public_client::client::public_client::PublicClient;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info,sqlx=warn".into()),
+        )
+        .init();
+
     let public_client = PublicClient::new_public_provider("mainnet", "ethereum")
         .expect("Failed to create public client");
     println!("Public client {:#?}", public_client);
