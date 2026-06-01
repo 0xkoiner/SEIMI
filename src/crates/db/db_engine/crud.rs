@@ -559,4 +559,43 @@ impl DBEngine {
         )
         .await
     }
+
+    pub async fn ensure_chain(&self, name: &str, chain_id: i64) -> Result<Chains, sqlx::Error> {
+        self.mutate_one(
+            "INSERT INTO chains (name, chain_id) VALUES ($1, $2) \
+             ON CONFLICT (chain_id) DO UPDATE SET name = EXCLUDED.name \
+             RETURNING id, name, chain_id",
+            |q| q.bind(name.to_owned()).bind(chain_id),
+        )
+        .await
+    }
+
+    pub async fn link_protocol_to_chains(
+        &self,
+        protocol_id: i64,
+        chain_ids: &[i64],
+    ) -> Result<Vec<ProtocolChains>, sqlx::Error> {
+        let mut tx = self.tx().await?;
+        let mut out = Vec::with_capacity(chain_ids.len());
+        for &chain_id in chain_ids {
+            let result = sqlx::query_as::<_, ProtocolChains>(
+                "INSERT INTO protocol_chains (protocol_id, chain_id) VALUES ($1, $2) \
+                 RETURNING protocol_id, chain_id",
+            )
+            .bind(protocol_id)
+            .bind(chain_id)
+            .fetch_one(&mut *tx)
+            .await;
+
+            match result {
+                Ok(row) => out.push(row),
+                Err(e) => {
+                    let _ = tx.rollback().await;
+                    return Err(e);
+                }
+            }
+        }
+        tx.commit().await?;
+        Ok(out)
+    }
 }

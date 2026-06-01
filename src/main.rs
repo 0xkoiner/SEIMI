@@ -28,11 +28,17 @@ async fn main() {
     //     .expect("Failed to insert chain");
     // println!("Inserted chain {:#?}", chain);
 
-    let protocol_chain = &conn
-        .insert_protocol_chains(1, 137)
-        .await
-        .expect("Failed to insert protocol_chain");
-    println!("Inserted protocol_chain {:#?}", protocol_chain);
+    // let polygon = &conn
+    //     .ensure_chain("Polygon", 137)
+    //     .await
+    //     .expect("Failed to ensure chain");
+    // println!("Ensured chain {:#?}", polygon);
+
+    // let protocol_chain = &conn
+    //     .insert_protocol_chains(1, polygon.id)
+    //     .await
+    //     .expect("Failed to insert protocol_chain");
+    // println!("Inserted protocol_chain {:#?}", protocol_chain);
 
     // let markets = &conn
     //     .insert_markets(
