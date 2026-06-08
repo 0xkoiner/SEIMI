@@ -1,3 +1,3 @@
-use alloy::primitives::{address, Address};
+use alloy::primitives::{Address, address};
 
 pub const AAVE_V1_POOL: Address = address!("0x398eC7346DcD622eDc5ae82352F02bE94C62d119");

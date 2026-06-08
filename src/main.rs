@@ -1,7 +1,7 @@
 use SEIMI::db::db_engine::sqlx_conn::DBEngine;
 use SEIMI::parser::aave::data::abi::AAVEv1Pool;
-use SEIMI::parser::aave::types::structs::ReserveData;
 use SEIMI::parser::aave::types::constants::AAVE_V1_POOL;
+use SEIMI::parser::aave::types::structs::ReserveData;
 use SEIMI::public_client::client::public_client::PublicClient;
 
 #[tokio::main]
@@ -18,7 +18,11 @@ async fn main() {
     println!("Public client {:#?}", public_client);
 
     let aave_parser = AAVEv1Pool::new(AAVE_V1_POOL, public_client.provider.clone());
-    let reserves = aave_parser.getReserves().call().await.expect("Failed to call getReserves");
+    let reserves = aave_parser
+        .getReserves()
+        .call()
+        .await
+        .expect("Failed to call getReserves");
 
     println!("Reserves: {:#?}", reserves);
 
@@ -31,7 +35,6 @@ async fn main() {
             .into();
         println!("Reserve: {:#?}, Data: {:#?}", reserve, reserve_data);
     }
-
 
     // let conn = DBEngine::build_connection()
     //     .await

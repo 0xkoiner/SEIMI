@@ -3,7 +3,7 @@ use alloy::sol;
 sol! {
     #[sol(rpc)]
     contract AAVEv1Pool {
-        function getReserves() external view returns (address[] memory); 
+        function getReserves() external view returns (address[] memory);
         function getReserveDecimals(address _reserve) external view returns (uint256);
         function getReserveData(
             address _reserve

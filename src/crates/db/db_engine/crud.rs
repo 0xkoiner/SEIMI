@@ -217,7 +217,10 @@ impl DBEngine {
         .await
     }
 
-    pub async fn read_protocol_chains_by_protocol_id(&self, protocol_id: i64) -> Result<Vec<ProtocolChains>, DbError> {
+    pub async fn read_protocol_chains_by_protocol_id(
+        &self,
+        protocol_id: i64,
+    ) -> Result<Vec<ProtocolChains>, DbError> {
         self.full_read::<ProtocolChains, _>(
             "SELECT * FROM protocol_chains WHERE protocol_id = $1",
             |q| q.bind(protocol_id),
@@ -225,7 +228,10 @@ impl DBEngine {
         .await
     }
 
-    pub async fn read_protocol_chains_by_chain_id(&self, chain_id: i64) -> Result<Vec<ProtocolChains>, DbError> {
+    pub async fn read_protocol_chains_by_chain_id(
+        &self,
+        chain_id: i64,
+    ) -> Result<Vec<ProtocolChains>, DbError> {
         self.full_read::<ProtocolChains, _>(
             "SELECT * FROM protocol_chains WHERE chain_id = $1",
             |q| q.bind(chain_id),
@@ -246,7 +252,10 @@ impl DBEngine {
         .await
     }
 
-    pub async fn read_protocol_metrics_ts_by_id(&self, id: i64) -> Result<ProtocolMetricsTs, DbError> {
+    pub async fn read_protocol_metrics_ts_by_id(
+        &self,
+        id: i64,
+    ) -> Result<ProtocolMetricsTs, DbError> {
         self.single_read::<ProtocolMetricsTs, _>(
             "SELECT * FROM protocol_metrics_ts WHERE id = $1",
             |q| q.bind(id),
@@ -254,7 +263,10 @@ impl DBEngine {
         .await
     }
 
-    pub async fn read_aggregate_metrics_ts_by_id(&self, id: i64) -> Result<AggregateMetricsTs, DbError> {
+    pub async fn read_aggregate_metrics_ts_by_id(
+        &self,
+        id: i64,
+    ) -> Result<AggregateMetricsTs, DbError> {
         self.single_read::<AggregateMetricsTs, _>(
             "SELECT * FROM aggregate_metrics_ts WHERE id = $1",
             |q| q.bind(id),
@@ -263,15 +275,18 @@ impl DBEngine {
     }
 
     pub async fn read_all_protocols(&self) -> Result<Vec<Protocols>, DbError> {
-        self.full_read::<Protocols, _>("SELECT * FROM protocols", |q| q).await
+        self.full_read::<Protocols, _>("SELECT * FROM protocols", |q| q)
+            .await
     }
 
     pub async fn read_all_chains(&self) -> Result<Vec<Chains>, DbError> {
-        self.full_read::<Chains, _>("SELECT * FROM chains", |q| q).await
+        self.full_read::<Chains, _>("SELECT * FROM chains", |q| q)
+            .await
     }
 
     pub async fn read_all_markets(&self) -> Result<Vec<Markets>, DbError> {
-        self.full_read::<Markets, _>("SELECT * FROM markets", |q| q).await
+        self.full_read::<Markets, _>("SELECT * FROM markets", |q| q)
+            .await
     }
 
     pub async fn read_market_metrics_ts_history(
@@ -328,9 +343,7 @@ impl DBEngine {
         .await
     }
 
-    pub async fn read_aggregate_metrics_ts_latest(
-        &self,
-    ) -> Result<AggregateMetricsTs, DbError> {
+    pub async fn read_aggregate_metrics_ts_latest(&self) -> Result<AggregateMetricsTs, DbError> {
         self.single_read::<AggregateMetricsTs, _>(
             "SELECT * FROM aggregate_metrics_ts ORDER BY observed_at DESC LIMIT 1",
             |q| q,
@@ -350,10 +363,7 @@ impl DBEngine {
         .await
     }
 
-    pub async fn read_chains_for_protocol(
-        &self,
-        protocol_id: i64,
-    ) -> Result<Vec<Chains>, DbError> {
+    pub async fn read_chains_for_protocol(&self, protocol_id: i64) -> Result<Vec<Chains>, DbError> {
         self.full_read::<Chains, _>(
             "SELECT c.* FROM chains c \
              JOIN protocol_chains pc ON pc.chain_id = c.id \
@@ -363,10 +373,7 @@ impl DBEngine {
         .await
     }
 
-    pub async fn read_protocols_on_chain(
-        &self,
-        chain_id: i64,
-    ) -> Result<Vec<Protocols>, DbError> {
+    pub async fn read_protocols_on_chain(&self, chain_id: i64) -> Result<Vec<Protocols>, DbError> {
         self.full_read::<Protocols, _>(
             "SELECT p.* FROM protocols p \
              JOIN protocol_chains pc ON pc.protocol_id = p.id \
@@ -380,21 +387,16 @@ impl DBEngine {
         &self,
         protocol_id: i64,
     ) -> Result<Vec<Markets>, DbError> {
-        self.full_read::<Markets, _>(
-            "SELECT * FROM markets WHERE protocol_id = $1",
-            |q| q.bind(protocol_id),
-        )
+        self.full_read::<Markets, _>("SELECT * FROM markets WHERE protocol_id = $1", |q| {
+            q.bind(protocol_id)
+        })
         .await
     }
 
-    pub async fn read_markets_by_chain(
-        &self,
-        chain_id: i64,
-    ) -> Result<Vec<Markets>, DbError> {
-        self.full_read::<Markets, _>(
-            "SELECT * FROM markets WHERE chain_id = $1",
-            |q| q.bind(chain_id),
-        )
+    pub async fn read_markets_by_chain(&self, chain_id: i64) -> Result<Vec<Markets>, DbError> {
+        self.full_read::<Markets, _>("SELECT * FROM markets WHERE chain_id = $1", |q| {
+            q.bind(chain_id)
+        })
         .await
     }
 
@@ -433,11 +435,7 @@ impl DBEngine {
         .await
     }
 
-    pub async fn update_protocol_watch(
-        &self,
-        id: i64,
-        watch: bool,
-    ) -> Result<Protocols, DbError> {
+    pub async fn update_protocol_watch(&self, id: i64, watch: bool) -> Result<Protocols, DbError> {
         let now = Utc::now();
         self.mutate_one(
             "UPDATE protocols SET watch = $1, updated_at = $2 WHERE id = $3 \
@@ -545,7 +543,11 @@ impl DBEngine {
     ) -> Result<u64, DbError> {
         self.delete(
             "DELETE FROM volume_rollups WHERE scope = $1 AND scope_id = $2 AND window_label = $3",
-            |q| q.bind(scope.to_owned()).bind(scope_id).bind(window_label.to_owned()),
+            |q| {
+                q.bind(scope.to_owned())
+                    .bind(scope_id)
+                    .bind(window_label.to_owned())
+            },
         )
         .await
     }
