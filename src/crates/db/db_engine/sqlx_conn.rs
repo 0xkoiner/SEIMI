@@ -56,11 +56,7 @@ impl DBEngine {
     }
 
     #[instrument(skip_all)]
-    pub(crate) async fn mutate_one<T, F>(
-        &self,
-        sql: &'static str,
-        bind: F,
-    ) -> Result<T, DbError>
+    pub(crate) async fn mutate_one<T, F>(&self, sql: &'static str, bind: F) -> Result<T, DbError>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
         F: FnOnce(
@@ -91,12 +87,7 @@ impl DBEngine {
         .await
     }
 
-    pub async fn update_user(
-        &self,
-        id: i64,
-        name: &str,
-        email: &str,
-    ) -> Result<Users, DbError> {
+    pub async fn update_user(&self, id: i64, name: &str, email: &str) -> Result<Users, DbError> {
         self.mutate_one(
             "UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email",
             |q| q.bind(name.to_owned()).bind(email.to_owned()).bind(id),
@@ -123,11 +114,7 @@ impl DBEngine {
     }
 
     #[instrument(skip_all)]
-    pub(crate) async fn single_read<T, F>(
-        &self,
-        sql: &'static str,
-        bind: F,
-    ) -> Result<T, DbError>
+    pub(crate) async fn single_read<T, F>(&self, sql: &'static str, bind: F) -> Result<T, DbError>
     where
         T: for<'r> FromRow<'r, PgRow> + Send + Unpin,
         F: FnOnce(

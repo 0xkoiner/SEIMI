@@ -1,23 +1,58 @@
 use SEIMI::db::db_engine::sqlx_conn::DBEngine;
+use SEIMI::parser::aave::data::abi::AAVEv1Pool;
+use SEIMI::parser::aave::types::constants::AAVE_V1_POOL;
+use SEIMI::parser::aave::types::structs::{ReserveConfigurationData, ReserveData};
 use SEIMI::public_client::client::public_client::PublicClient;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,sqlx=warn".into()),
-        )
-        .init();
+    // tracing_subscriber::fmt()
+    //     .with_env_filter(
+    //         tracing_subscriber::EnvFilter::try_from_default_env()
+    //             .unwrap_or_else(|_| "info,sqlx=warn".into()),
+    //     )
+    //     .init();
 
     let public_client = PublicClient::new_public_provider("mainnet", "ethereum")
         .expect("Failed to create public client");
     println!("Public client {:#?}", public_client);
 
-    let conn = DBEngine::build_connection()
+    let aave_parser = AAVEv1Pool::new(AAVE_V1_POOL, public_client.provider.clone());
+    let reserves = aave_parser
+        .getReserves()
+        .call()
         .await
-        .expect("Failed to connect to database");
-    println!("Database connection established: {:#?}", conn);
+        .expect("Failed to call getReserves");
+
+    println!("Reserves: {:#?}", reserves);
+
+    for reserve in reserves.clone() {
+        let reserve_data: ReserveData = aave_parser
+            .getReserveData(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveData")
+            .into();
+        println!("Reserve: {:#?}, Data: {:#?}", reserve, reserve_data);
+    }
+
+    for reserve in reserves {
+        let reserve_config_data: ReserveConfigurationData = aave_parser
+            .getReserveConfigurationData(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveConfigurationData")
+            .into();
+        println!(
+            "Reserve: {:#?}, Configuration Data: {:#?}",
+            reserve, reserve_config_data
+        );
+    }
+
+    // let conn = DBEngine::build_connection()
+    //     .await
+    //     .expect("Failed to connect to database");
+    // println!("Database connection established: {:#?}", conn);
 
     // let _ = &conn.delete_all_tables().await.expect("Failed to delete all tables");
 
