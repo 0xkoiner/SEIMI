@@ -1,6 +1,8 @@
 use alloy::primitives::{Address, U256, aliases::U40};
 
-use crate::parser::aave::data::abi::AAVEv1Pool::getReserveDataReturn;
+use crate::parser::aave::data::abi::AAVEv1Pool::{
+    getReserveConfigurationDataReturn, getReserveDataReturn,
+};
 
 #[derive(Debug)]
 pub struct ReserveData {
@@ -19,6 +21,18 @@ pub struct ReserveData {
     pub last_update_timestamp: U40,
 }
 
+#[derive(Debug)]
+pub struct ReserveConfigurationData {
+    pub ltv: U256,
+    pub liquidation_threshold: U256,
+    pub liquidation_bonus: U256,
+    pub interest_rate_strategy_address: Address,
+    pub usage_as_collateral_enabled: bool,
+    pub borrowing_enabled: bool,
+    pub stable_borrow_rate_enabled: bool,
+    pub is_active: bool,
+}
+
 impl From<getReserveDataReturn> for ReserveData {
     fn from(r: getReserveDataReturn) -> Self {
         Self {
@@ -35,6 +49,21 @@ impl From<getReserveDataReturn> for ReserveData {
             variable_borrow_index: r.variableBorrowIndex,
             a_token_address: r.aTokenAddress,
             last_update_timestamp: r.lastUpdateTimestamp,
+        }
+    }
+}
+
+impl From<getReserveConfigurationDataReturn> for ReserveConfigurationData {
+    fn from(r: getReserveConfigurationDataReturn) -> Self {
+        Self {
+            ltv: r.ltv,
+            liquidation_threshold: r.liquidationThreshold,
+            liquidation_bonus: r.liquidationBonus,
+            interest_rate_strategy_address: r.interestRateStrategyAddress,
+            usage_as_collateral_enabled: r.usageAsCollateralEnabled,
+            borrowing_enabled: r.borrowingEnabled,
+            stable_borrow_rate_enabled: r.stableBorrowRateEnabled,
+            is_active: r.isActive,
         }
     }
 }

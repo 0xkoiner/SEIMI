@@ -4,7 +4,6 @@ sol! {
     #[sol(rpc)]
     contract AAVEv1Pool {
         function getReserves() external view returns (address[] memory);
-        function getReserveDecimals(address _reserve) external view returns (uint256);
         function getReserveData(
             address _reserve
           )
@@ -24,6 +23,21 @@ sol! {
               uint256 variableBorrowIndex,
               address aTokenAddress,
               uint40 lastUpdateTimestamp
+            );
+        function getReserveConfigurationData(
+            address _reserve
+        )
+            external
+            view
+            returns (
+            uint256 ltv,
+            uint256 liquidationThreshold,
+            uint256 liquidationBonus,
+            address interestRateStrategyAddress,
+            bool usageAsCollateralEnabled,
+            bool borrowingEnabled,
+            bool stableBorrowRateEnabled,
+            bool isActive
             );
     }
 }
