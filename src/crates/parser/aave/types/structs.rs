@@ -1,4 +1,7 @@
-use alloy::primitives::{Address, U256, aliases::U40};
+use alloy::primitives::{
+    Address, U256,
+    aliases::{I200, U24, U40, U96, U120, U200},
+};
 
 use crate::parser::aave::data::abi::AAVEv1Pool::{
     getReserveConfigurationDataReturn as ReserveConfigurationDataV1Return,
@@ -6,7 +9,18 @@ use crate::parser::aave::data::abi::AAVEv1Pool::{
 };
 use crate::parser::aave::data::abi::AAVEv2Pool::getReserveDataReturn as ReserveDataV2Return;
 use crate::parser::aave::data::abi::AAVEv3Pool::getReserveDataReturn as ReserveDataV3Return;
+use crate::parser::aave::data::abi::AAVEv4CoreHub::{
+    getAssetReturn as AssetV4Return, getSpokeConfigReturn as SpokeConfigV4Return,
+    getSpokeReturn as SpokeDataV4Return,
+};
 
+/**
+ * 
+ * 
+ * AAVE V1
+ * 
+ * 
+ */
 #[derive(Debug)]
 pub struct ReserveDataV1 {
     pub total_liquidity: U256,
@@ -71,6 +85,13 @@ impl From<ReserveConfigurationDataV1Return> for ReserveConfigurationDataV1 {
     }
 }
 
+/**
+ * 
+ * 
+ * AAVE V2
+ * 
+ * 
+ */
 #[derive(Debug)]
 pub struct ReserveDataV2 {
     pub configuration: U256,
@@ -159,6 +180,13 @@ impl From<U256> for NormalizedVariableDebtV2 {
     }
 }
 
+/**
+ * 
+ * 
+ * AAVE V3
+ * 
+ * 
+ */
 #[derive(Debug)]
 pub struct ReserveDataV3 {
     pub configuration: U256,
@@ -308,5 +336,109 @@ pub struct VirtualUnderlyingBalanceV3(pub u128);
 impl From<u128> for VirtualUnderlyingBalanceV3 {
     fn from(amount: u128) -> Self {
         Self(amount)
+    }
+}
+
+/**
+ * 
+ * 
+ * AAVE V4
+ * 
+ * 
+ */
+#[derive(Debug)]
+pub struct AssetV4 {
+    pub liquidity: U120,
+    pub realized_fees: U120,
+    pub decimals: u8,
+    pub added_shares: U120,
+    pub swept: U120,
+    pub premium_offset_ray: I200,
+    pub drawn_shares: U120,
+    pub premium_shares: U120,
+    pub liquidity_fee: u16,
+    pub drawn_index: U120,
+    pub drawn_rate: U96,
+    pub last_update_timestamp: U40,
+    pub underlying: Address,
+    pub ir_strategy: Address,
+    pub reinvestment_controller: Address,
+    pub fee_receiver: Address,
+    pub deficit_ray: U200,
+}
+
+impl From<AssetV4Return> for AssetV4 {
+    fn from(r: AssetV4Return) -> Self {
+        Self {
+            liquidity: r.liquidity,
+            realized_fees: r.realizedFees,
+            decimals: r.decimals,
+            added_shares: r.addedShares,
+            swept: r.swept,
+            premium_offset_ray: r.premiumOffsetRay,
+            drawn_shares: r.drawnShares,
+            premium_shares: r.premiumShares,
+            liquidity_fee: r.liquidityFee,
+            drawn_index: r.drawnIndex,
+            drawn_rate: r.drawnRate,
+            last_update_timestamp: r.lastUpdateTimestamp,
+            underlying: r.underlying,
+            ir_strategy: r.irStrategy,
+            reinvestment_controller: r.reinvestmentController,
+            fee_receiver: r.feeReceiver,
+            deficit_ray: r.deficitRay,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SpokeDataV4 {
+    pub drawn_shares: U120,
+    pub premium_shares: U120,
+    pub premium_offset_ray: I200,
+    pub added_shares: U120,
+    pub add_cap: U40,
+    pub draw_cap: U40,
+    pub risk_premium_threshold: U24,
+    pub active: bool,
+    pub halted: bool,
+    pub deficit_ray: U200,
+}
+
+impl From<SpokeDataV4Return> for SpokeDataV4 {
+    fn from(r: SpokeDataV4Return) -> Self {
+        Self {
+            drawn_shares: r.drawnShares,
+            premium_shares: r.premiumShares,
+            premium_offset_ray: r.premiumOffsetRay,
+            added_shares: r.addedShares,
+            add_cap: r.addCap,
+            draw_cap: r.drawCap,
+            risk_premium_threshold: r.riskPremiumThreshold,
+            active: r.active,
+            halted: r.halted,
+            deficit_ray: r.deficitRay,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SpokeConfigV4 {
+    pub add_cap: U40,
+    pub draw_cap: U40,
+    pub risk_premium_threshold: U24,
+    pub active: bool,
+    pub halted: bool,
+}
+
+impl From<SpokeConfigV4Return> for SpokeConfigV4 {
+    fn from(r: SpokeConfigV4Return) -> Self {
+        Self {
+            add_cap: r.addCap,
+            draw_cap: r.drawCap,
+            risk_premium_threshold: r.riskPremiumThreshold,
+            active: r.active,
+            halted: r.halted,
+        }
     }
 }
