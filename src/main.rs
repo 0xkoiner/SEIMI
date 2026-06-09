@@ -1,7 +1,9 @@
-use SEIMI::db::db_engine::sqlx_conn::DBEngine;
-use SEIMI::parser::aave::data::abi::AAVEv1Pool;
-use SEIMI::parser::aave::types::constants::AAVE_V1_POOL;
-use SEIMI::parser::aave::types::structs::{ReserveConfigurationData, ReserveData};
+use SEIMI::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool};
+use SEIMI::parser::aave::types::constants::{AAVE_V1_POOL, AAVE_V2_POOL};
+use SEIMI::parser::aave::types::structs::{
+    NormalizedIncomeV2, NormalizedVariableDebtV2, ReserveConfigurationDataV1,
+    ReserveConfigurationDataV2, ReserveDataV1, ReserveDataV2,
+};
 use SEIMI::public_client::client::public_client::PublicClient;
 
 #[tokio::main]
@@ -17,17 +19,19 @@ async fn main() {
         .expect("Failed to create public client");
     println!("Public client {:#?}", public_client);
 
-    let aave_parser = AAVEv1Pool::new(AAVE_V1_POOL, public_client.provider.clone());
-    let reserves = aave_parser
+    let aave_parser_v1 = AAVEv1Pool::new(AAVE_V1_POOL, public_client.provider.clone());
+    let aave_parser_v2 = AAVEv2Pool::new(AAVE_V2_POOL, public_client.provider.clone());
+
+    let reserves_v1 = aave_parser_v1
         .getReserves()
         .call()
         .await
         .expect("Failed to call getReserves");
 
-    println!("Reserves: {:#?}", reserves);
+    println!("Reserves: {:#?}", reserves_v1);
 
-    for reserve in reserves.clone() {
-        let reserve_data: ReserveData = aave_parser
+    for reserve in reserves_v1.clone() {
+        let reserve_data: ReserveDataV1 = aave_parser_v1
             .getReserveData(reserve)
             .call()
             .await
@@ -36,8 +40,8 @@ async fn main() {
         println!("Reserve: {:#?}, Data: {:#?}", reserve, reserve_data);
     }
 
-    for reserve in reserves {
-        let reserve_config_data: ReserveConfigurationData = aave_parser
+    for reserve in reserves_v1 {
+        let reserve_config_data: ReserveConfigurationDataV1 = aave_parser_v1
             .getReserveConfigurationData(reserve)
             .call()
             .await
@@ -46,6 +50,56 @@ async fn main() {
         println!(
             "Reserve: {:#?}, Configuration Data: {:#?}",
             reserve, reserve_config_data
+        );
+    }
+
+    let reserves_v2 = aave_parser_v2
+        .getReservesList()
+        .call()
+        .await
+        .expect("Failed to call getReservesList");
+
+    println!("Reserves: {:#?}", reserves_v2);
+
+    for reserve in reserves_v2.clone() {
+        let reserve_data: ReserveDataV2 = aave_parser_v2
+            .getReserveData(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveData")
+            .into();
+        println!("Reserve: {:#?}, Data: {:#?}", reserve, reserve_data);
+    }
+
+    for reserve in reserves_v2.clone() {
+        let reserve_config_data: ReserveConfigurationDataV2 = aave_parser_v2
+            .getConfiguration(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveConfigurationData")
+            .into();
+        println!(
+            "Reserve: {:#?}, Configuration Data: {:#?}",
+            reserve, reserve_config_data
+        );
+    }
+
+    for reserve in reserves_v2 {
+        let income: NormalizedIncomeV2 = aave_parser_v2
+            .getReserveNormalizedIncome(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveNormalizedIncome")
+            .into();
+        let variable_debt: NormalizedVariableDebtV2 = aave_parser_v2
+            .getReserveNormalizedVariableDebt(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveNormalizedVariableDebt")
+            .into();
+        println!(
+            "Reserve: {:#?}, NormalizedIncome: {:#?}, NormalizedVariableDebt: {:#?}",
+            reserve, income, variable_debt
         );
     }
 
