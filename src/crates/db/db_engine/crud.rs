@@ -553,11 +553,22 @@ impl DBEngine {
     }
 
     pub async fn delete_all_tables(&self) -> Result<u64, DbError> {
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM information_schema.tables \
+            WHERE table_schema = 'public' AND table_name = 'protocols')",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        if !exists {
+            return Ok(0); // nothing to truncate
+        }
+
         self.delete(
             "TRUNCATE TABLE \
-             aggregate_metrics_ts, protocol_metrics_ts, market_metrics_ts, \
-             markets, protocol_chains, chains, protocols, volume_rollups \
-             RESTART IDENTITY CASCADE",
+            aggregate_metrics_ts, protocol_metrics_ts, market_metrics_ts, \
+            markets, protocol_chains, chains, protocols, volume_rollups \
+            RESTART IDENTITY CASCADE",
             |q| q,
         )
         .await
