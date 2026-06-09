@@ -70,3 +70,39 @@ sol! {
         function getReserveNormalizedVariableDebt(address asset) external view returns (uint256);
     }
 }
+
+sol! {
+    #[sol(rpc)]
+    contract AAVEv3Pool {
+        function getReservesList() external view returns (address[] memory);
+        function getReserveData(
+            address _reserve
+        )
+        external
+        view
+        returns (
+            uint256 configuration,
+            uint128 liquidityIndex,
+            uint128 currentLiquidityRate,
+            uint128 variableBorrowIndex,
+            uint128 currentVariableBorrowRate,
+            uint128 currentStableBorrowRate,
+            uint40 lastUpdateTimestamp,
+            uint16 id,
+            address aTokenAddress,
+            address stableDebtTokenAddress,
+            address variableDebtTokenAddress,
+            address interestRateStrategyAddress,
+            uint128 accruedToTreasury,
+            uint128 unbacked,
+            uint128 isolationModeTotalDebt
+        );
+        function getConfiguration(address asset) external view returns (uint256 data);
+        function getLiquidationGracePeriod(address asset) external view returns (uint40);
+        function getReserveAToken(address asset) external view returns (address);
+        function getReserveDeficit(address asset) external view returns (uint256);
+        function getReserveNormalizedIncome(address asset) external view returns (uint256);
+        function getReserveNormalizedVariableDebt(address asset) external view returns (uint256);
+        function getVirtualUnderlyingBalance(address asset) external view returns (uint128);
+    }
+}

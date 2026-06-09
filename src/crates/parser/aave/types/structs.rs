@@ -5,6 +5,7 @@ use crate::parser::aave::data::abi::AAVEv1Pool::{
     getReserveDataReturn as ReserveDataV1Return,
 };
 use crate::parser::aave::data::abi::AAVEv2Pool::getReserveDataReturn as ReserveDataV2Return;
+use crate::parser::aave::data::abi::AAVEv3Pool::getReserveDataReturn as ReserveDataV3Return;
 
 #[derive(Debug)]
 pub struct ReserveDataV1 {
@@ -155,5 +156,156 @@ pub struct NormalizedVariableDebtV2(pub U256);
 impl From<U256> for NormalizedVariableDebtV2 {
     fn from(ray: U256) -> Self {
         Self(ray)
+    }
+}
+
+#[derive(Debug)]
+pub struct ReserveDataV3 {
+    pub configuration: U256,
+    pub liquidity_index: u128,
+    pub current_liquidity_rate: u128,
+    pub variable_borrow_index: u128,
+    pub current_variable_borrow_rate: u128,
+    pub current_stable_borrow_rate: u128,
+    pub last_update_timestamp: U40,
+    pub id: u16,
+    pub a_token_address: Address,
+    pub stable_debt_token_address: Address,
+    pub variable_debt_token_address: Address,
+    pub interest_rate_strategy_address: Address,
+    pub accrued_to_treasury: u128,
+    pub unbacked: u128,
+    pub isolation_mode_total_debt: u128,
+}
+
+impl From<ReserveDataV3Return> for ReserveDataV3 {
+    fn from(r: ReserveDataV3Return) -> Self {
+        Self {
+            configuration: r.configuration,
+            liquidity_index: r.liquidityIndex,
+            current_liquidity_rate: r.currentLiquidityRate,
+            variable_borrow_index: r.variableBorrowIndex,
+            current_variable_borrow_rate: r.currentVariableBorrowRate,
+            current_stable_borrow_rate: r.currentStableBorrowRate,
+            last_update_timestamp: r.lastUpdateTimestamp,
+            id: r.id,
+            a_token_address: r.aTokenAddress,
+            stable_debt_token_address: r.stableDebtTokenAddress,
+            variable_debt_token_address: r.variableDebtTokenAddress,
+            interest_rate_strategy_address: r.interestRateStrategyAddress,
+            accrued_to_treasury: r.accruedToTreasury,
+            unbacked: r.unbacked,
+            isolation_mode_total_debt: r.isolationModeTotalDebt,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ReserveConfigurationDataV3 {
+    pub ltv: u16,
+    pub liquidation_threshold: u16,
+    pub liquidation_bonus: u16,
+    pub decimals: u8,
+    pub is_active: bool,
+    pub is_frozen: bool,
+    pub borrowing_enabled: bool,
+    pub is_paused: bool,
+    pub flashloan_enabled: bool,
+    pub reserve_factor: u16,
+    pub borrow_cap: u64,
+    pub supply_cap: u64,
+    pub liquidation_protocol_fee: u16,
+}
+
+impl From<U256> for ReserveConfigurationDataV3 {
+    fn from(data: U256) -> Self {
+        // Aave V3 ReserveConfigurationMap bit layout (LSB-first):
+        //   0..16    ltv
+        //   16..32   liquidation_threshold
+        //   32..48   liquidation_bonus
+        //   48..56   decimals
+        //   56       is_active
+        //   57       is_frozen
+        //   58       borrowing_enabled
+        //   59       DEPRECATED stable-rate-borrowing
+        //   60       is_paused
+        //   61       DEPRECATED isolation-borrow
+        //   62       DEPRECATED siloed-borrowing
+        //   63       flashloan_enabled
+        //   64..80   reserve_factor
+        //   80..116  borrow_cap                (36 bits, whole tokens; 0 == no cap)
+        //   116..152 supply_cap                (36 bits, whole tokens; 0 == no cap)
+        //   152..168 liquidation_protocol_fee
+        //   168..256 DEPRECATED/unused (eMode, unbacked, debt ceiling, virtual accounting)
+        let bytes = data.to_le_bytes::<32>();
+        let flags = bytes[7];
+        // 36-bit borrow_cap occupies bytes 10..15; the top 4 bits of byte 14 belong to supply_cap.
+        let borrow_cap = u64::from_le_bytes([
+            bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], 0, 0, 0,
+        ]) & 0xF_FFFF_FFFF;
+        // 36-bit supply_cap starts at byte 14 bit 4; take 5 bytes and shift down.
+        let supply_cap = (u64::from_le_bytes([
+            bytes[14], bytes[15], bytes[16], bytes[17], bytes[18], 0, 0, 0,
+        ]) >> 4) & 0xF_FFFF_FFFF;
+        Self {
+            ltv: u16::from_le_bytes([bytes[0], bytes[1]]),
+            liquidation_threshold: u16::from_le_bytes([bytes[2], bytes[3]]),
+            liquidation_bonus: u16::from_le_bytes([bytes[4], bytes[5]]),
+            decimals: bytes[6],
+            is_active: flags & 0b0000_0001 != 0,
+            is_frozen: flags & 0b0000_0010 != 0,
+            borrowing_enabled: flags & 0b0000_0100 != 0,
+            is_paused: flags & 0b0001_0000 != 0,
+            flashloan_enabled: flags & 0b1000_0000 != 0,
+            reserve_factor: u16::from_le_bytes([bytes[8], bytes[9]]),
+            borrow_cap,
+            supply_cap,
+            liquidation_protocol_fee: u16::from_le_bytes([bytes[19], bytes[20]]),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct NormalizedIncomeV3(pub U256);
+
+impl From<U256> for NormalizedIncomeV3 {
+    fn from(ray: U256) -> Self {
+        Self(ray)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct NormalizedVariableDebtV3(pub U256);
+
+impl From<U256> for NormalizedVariableDebtV3 {
+    fn from(ray: U256) -> Self {
+        Self(ray)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ReserveDeficitV3(pub U256);
+
+impl From<U256> for ReserveDeficitV3 {
+    fn from(amount: U256) -> Self {
+        Self(amount)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct LiquidationGracePeriodV3(pub U40);
+
+impl From<U40> for LiquidationGracePeriodV3 {
+    fn from(deadline: U40) -> Self {
+        Self(deadline)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct VirtualUnderlyingBalanceV3(pub u128);
+
+impl From<u128> for VirtualUnderlyingBalanceV3 {
+    fn from(amount: u128) -> Self {
+        Self(amount)
     }
 }

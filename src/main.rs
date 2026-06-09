@@ -1,8 +1,10 @@
-use SEIMI::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool};
-use SEIMI::parser::aave::types::constants::{AAVE_V1_POOL, AAVE_V2_POOL};
+use SEIMI::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool, AAVEv3Pool};
+use SEIMI::parser::aave::types::constants::{AAVE_V1_POOL, AAVE_V2_POOL, AAVE_V3_POOL};
 use SEIMI::parser::aave::types::structs::{
-    NormalizedIncomeV2, NormalizedVariableDebtV2, ReserveConfigurationDataV1,
-    ReserveConfigurationDataV2, ReserveDataV1, ReserveDataV2,
+    LiquidationGracePeriodV3, NormalizedIncomeV2, NormalizedIncomeV3, NormalizedVariableDebtV2,
+    NormalizedVariableDebtV3, ReserveConfigurationDataV1, ReserveConfigurationDataV2,
+    ReserveConfigurationDataV3, ReserveDataV1, ReserveDataV2, ReserveDataV3, ReserveDeficitV3,
+    VirtualUnderlyingBalanceV3,
 };
 use SEIMI::public_client::client::public_client::PublicClient;
 
@@ -100,6 +102,81 @@ async fn main() {
         println!(
             "Reserve: {:#?}, NormalizedIncome: {:#?}, NormalizedVariableDebt: {:#?}",
             reserve, income, variable_debt
+        );
+    }
+
+    let aave_parser_v3 = AAVEv3Pool::new(AAVE_V3_POOL, public_client.provider.clone());
+
+    let reserves_v3 = aave_parser_v3
+        .getReservesList()
+        .call()
+        .await
+        .expect("Failed to call getReservesList");
+
+    println!("Reserves V3: {:#?}", reserves_v3);
+
+    for reserve in reserves_v3.clone() {
+        let reserve_data: ReserveDataV3 = aave_parser_v3
+            .getReserveData(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveData")
+            .into();
+        println!("Reserve: {:#?}, Data: {:#?}", reserve, reserve_data);
+    }
+
+    for reserve in reserves_v3.clone() {
+        let reserve_config_data: ReserveConfigurationDataV3 = aave_parser_v3
+            .getConfiguration(reserve)
+            .call()
+            .await
+            .expect("Failed to call getConfiguration")
+            .into();
+        println!(
+            "Reserve: {:#?}, Configuration Data: {:#?}",
+            reserve, reserve_config_data
+        );
+    }
+
+    for reserve in reserves_v3 {
+        let income: NormalizedIncomeV3 = aave_parser_v3
+            .getReserveNormalizedIncome(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveNormalizedIncome")
+            .into();
+        let variable_debt: NormalizedVariableDebtV3 = aave_parser_v3
+            .getReserveNormalizedVariableDebt(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveNormalizedVariableDebt")
+            .into();
+        let a_token = aave_parser_v3
+            .getReserveAToken(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveAToken");
+        let deficit: ReserveDeficitV3 = aave_parser_v3
+            .getReserveDeficit(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveDeficit")
+            .into();
+        let grace_period: LiquidationGracePeriodV3 = aave_parser_v3
+            .getLiquidationGracePeriod(reserve)
+            .call()
+            .await
+            .expect("Failed to call getLiquidationGracePeriod")
+            .into();
+        let virtual_balance: VirtualUnderlyingBalanceV3 = aave_parser_v3
+            .getVirtualUnderlyingBalance(reserve)
+            .call()
+            .await
+            .expect("Failed to call getVirtualUnderlyingBalance")
+            .into();
+        println!(
+            "Reserve: {:#?}\n  NormalizedIncome: {:#?}\n  NormalizedVariableDebt: {:#?}\n  aToken: {:#?}\n  Deficit: {:#?}\n  GracePeriod: {:#?}\n  VirtualUnderlyingBalance: {:#?}",
+            reserve, income, variable_debt, a_token, deficit, grace_period, virtual_balance
         );
     }
 
