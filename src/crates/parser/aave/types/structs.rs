@@ -246,7 +246,8 @@ impl From<U256> for ReserveConfigurationDataV3 {
         // 36-bit supply_cap starts at byte 14 bit 4; take 5 bytes and shift down.
         let supply_cap = (u64::from_le_bytes([
             bytes[14], bytes[15], bytes[16], bytes[17], bytes[18], 0, 0, 0,
-        ]) >> 4) & 0xF_FFFF_FFFF;
+        ]) >> 4)
+            & 0xF_FFFF_FFFF;
         Self {
             ltv: u16::from_le_bytes([bytes[0], bytes[1]]),
             liquidation_threshold: u16::from_le_bytes([bytes[2], bytes[3]]),
