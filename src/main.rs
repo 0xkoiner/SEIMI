@@ -3,7 +3,7 @@ use sqlx::types::BigDecimal;
 
 use SEIMI::db::db_engine::sqlx_conn::DBEngine;
 use SEIMI::helpers::{
-    math::{calculate_average_apr_ray_aave_v1, ray_to_bps, u256_to_bigdecimal},
+    math::{fetch_reserve_snapshots_aave_v1, ray_to_bps, u256_to_bigdecimal},
     vectors::vec_addr_to_string,
 };
 use SEIMI::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool, AAVEv3Pool, AAVEv4CoreHub};
@@ -467,8 +467,7 @@ async fn main() {
 
     let reserves_v1_csv: String = vec_addr_to_string(&reserves_v1).await;
 
-    let (avg_apr_ray, total_liquidity_sum) =
-        calculate_average_apr_ray_aave_v1(&aave_parser_v1, &reserves_v1).await;
+    let snapshots = fetch_reserve_snapshots_aave_v1(&aave_parser_v1, &reserves_v1).await;
 
     let markets = &conn
         .insert_markets(
@@ -482,19 +481,24 @@ async fn main() {
         .expect("Failed to insert markets");
     println!("Inserted markets {:#?}", markets);
 
-    let market_metrics_ts = &conn
-        .insert_market_metrics_ts(
-            markets.id,
-            u256_to_bigdecimal(total_liquidity_sum).await,
-            BigDecimal::from(0), // TODO(volume): scan Deposit/Withdraw/Borrow/Repay events
-            ray_to_bps(avg_apr_ray).await, // apy_bps (TODO: compound)
-            ray_to_bps(avg_apr_ray).await, // apr_bps (supply, TVL-weighted)
-            "aave_v1:getReserveData:ethereum",
-            "tier1",
-        )
-        .await
-        .expect("Failed to insert market_metrics_ts");
-    println!("Inserted market_metrics_ts {:#?}", market_metrics_ts);
+    for (reserve, total_liquidity, liquidity_rate_ray) in snapshots {
+        let row = conn
+            .insert_market_metrics_ts(
+                markets.id,
+                Some(&reserve.to_string()),
+                u256_to_bigdecimal(total_liquidity).await,
+                // TODO(volume): defer until USD-normalization lands; mixed-decimal sums are meaningless.
+                BigDecimal::from(0),
+                // apy_bps = apr_bps for now; revisit with continuous compounding (e^APR - 1) when V2/V3 land.
+                ray_to_bps(liquidity_rate_ray).await,
+                ray_to_bps(liquidity_rate_ray).await,
+                "aave_v1:getReserveData:ethereum",
+                "tier1",
+            )
+            .await
+            .expect("Failed to insert market_metrics_ts");
+        println!("Inserted market_metrics_ts {row:#?}");
+    }
 
     // let protocol_metrics_ts = &conn
     //     .insert_protocol_metrics_ts(protocol.id, 20, 30, "my granny", "good-one")

@@ -84,6 +84,7 @@ impl DBEngine {
     pub async fn insert_market_metrics_ts(
         &self,
         market_id: i64,
+        underlying: Option<&str>,
         tvl_base: BigDecimal,
         volume_base: BigDecimal,
         apy_bps: i32,
@@ -94,11 +95,12 @@ impl DBEngine {
         let now = Utc::now();
 
         self.mutate_one(
-            "INSERT INTO market_metrics_ts (market_id, observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
-             RETURNING id, market_id, observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier",
+            "INSERT INTO market_metrics_ts (market_id, underlying, observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
+             RETURNING id, market_id, underlying, observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier",
             |q| {
                 q.bind(market_id)
+                    .bind(underlying.map(|s| s.to_owned()))
                     .bind(now)
                     .bind(tvl_base)
                     .bind(volume_base)
@@ -554,22 +556,18 @@ impl DBEngine {
     }
 
     pub async fn delete_all_tables(&self) -> Result<u64, DbError> {
-        let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS (SELECT 1 FROM information_schema.tables \
-            WHERE table_schema = 'public' AND table_name = 'protocols')",
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        if !exists {
-            return Ok(0); // nothing to truncate
-        }
-
+        // Dev-stage reset: drop user tables AND sqlx's migration bookkeeping so the
+        // following init_db() can re-apply 0001_init.sql from scratch. We edit
+        // migrations in place during dev; without dropping _sqlx_migrations the
+        // sqlx migrator would raise VersionMismatch on the changed checksum, and
+        // without dropping the user tables their schemas would be stale (CREATE
+        // TABLE IF NOT EXISTS is a no-op on column additions).
         self.delete(
-            "TRUNCATE TABLE \
+            "DROP TABLE IF EXISTS \
             aggregate_metrics_ts, protocol_metrics_ts, market_metrics_ts, \
-            markets, protocol_chains, chains, protocols, volume_rollups \
-            RESTART IDENTITY CASCADE",
+            markets, protocol_chains, chains, protocols, volume_rollups, \
+            _sqlx_migrations \
+            CASCADE",
             |q| q,
         )
         .await
