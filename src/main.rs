@@ -1,12 +1,14 @@
 use sqlx::types::BigDecimal;
 use alloy::primitives::{Address, B256, U256};
 
+use SEIMI::parser::erc_tokens::helpers::read::get_erc20_metadata;
 use SEIMI::db::db_engine::sqlx_conn::DBEngine;
 use SEIMI::defi_llama::api_connector::DefiLlamaApiConnector;
 use SEIMI::helpers::{
     math::{fetch_reserve_snapshots_aave_v1, ray_to_bps, u256_to_bigdecimal},
     vectors::vec_addr_to_string,
 };
+use SEIMI::parser::erc_tokens::data::abi::Erc20;
 use SEIMI::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool, AAVEv3Pool, AAVEv4CoreHub};
 use SEIMI::parser::aave::types::constants::{
     AAVE_V1_POOL, AAVE_V2_POOL, AAVE_V3_POOL, AAVE_V4_CORE_HUB,
@@ -32,28 +34,28 @@ async fn main() {
         .expect("Failed to create public client");
     println!("Public client {:#?}", public_client);
 
-    // let aave_parser_v1 = AAVEv1Pool::new(AAVE_V1_POOL, public_client.provider.clone());
+    let aave_parser_v1 = AAVEv1Pool::new(AAVE_V1_POOL, public_client.provider.clone());
     // // let aave_parser_v2 = AAVEv2Pool::new(AAVE_V2_POOL, public_client.provider.clone());
     // // let aave_parser_v3: AAVEv3Pool::AAVEv3PoolInstance<alloy::providers::DynProvider> = AAVEv3Pool::new(AAVE_V3_POOL, public_client.provider.clone());
     // // let aave_hub_v4 = AAVEv4CoreHub::new(AAVE_V4_CORE_HUB, public_client.provider.clone());
 
-    // let reserves_v1 = aave_parser_v1
-    //     .getReserves()
-    //     .call()
-    //     .await
-    //     .expect("Failed to call getReserves");
+    let reserves_v1 = aave_parser_v1
+        .getReserves()
+        .call()
+        .await
+        .expect("Failed to call getReserves");
 
-    // println!("Reserves: {:#?}", reserves_v1);
+    println!("Reserves: {:#?}", reserves_v1);
 
-    // for reserve in reserves_v1.clone() {
-    //     let reserve_data: ReserveDataV1 = aave_parser_v1
-    //         .getReserveData(reserve)
-    //         .call()
-    //         .await
-    //         .expect("Failed to call getReserveData")
-    //         .into();
-    //     println!("Reserve: {:#?}, Data: {:#?}", reserve, reserve_data);
-    // }
+    for reserve in reserves_v1.clone() {
+        let reserve_data: ReserveDataV1 = aave_parser_v1
+            .getReserveData(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveData")
+            .into();
+        println!("Reserve: {:#?}, Data: {:#?}", reserve, reserve_data);
+    }
 
     // for reserve in reserves_v1 {
     //     let reserve_config_data: ReserveConfigurationDataV1 = aave_parser_v1
@@ -431,94 +433,99 @@ async fn main() {
     // //     "V4 previews for asset {asset_id_v4} (sample amount={preview_amount_v4}, shares={preview_shares_v4}):\n  add_by_assets={preview_add_by_assets_v4}\n  add_by_shares={preview_add_by_shares_v4}\n  draw_by_assets={preview_draw_by_assets_v4}\n  remove_by_assets={preview_remove_by_assets_v4}\n  remove_by_shares={preview_remove_by_shares_v4}\n  restore_by_assets={preview_restore_by_assets_v4}\n  restore_by_shares={preview_restore_by_shares_v4}"
     // // );
 
-    // let conn = DBEngine::build_connection()
-    //     .await
-    //     .expect("Failed to connect to database");
-    // println!("Database connection established: {:#?}", conn);
-
-    // let _ = &conn
-    //     .delete_all_tables()
-    //     .await
-    //     .expect("Failed to delete all tables");
-
-    // let _ = &conn.init_db().await.expect("Failed to initialize database");
-
-    // let protocol = &conn
-    //     .insert_protocols(
-    //         "AAVEv1",
-    //         "AAVE-V1",
-    //         "Lending",
-    //         Some("src/crates/parser/aave/data/abi_aave_v1.json"),
-    //     )
-    //     .await
-    //     .expect("Failed to insert protocol");
-    // println!("Inserted protocol {:#?}", protocol);
-
-    // let chain_ethereum = &conn
-    //     .insert_chains("Ethereum", 1)
-    //     .await
-    //     .expect("Failed to insert chain");
-    // println!("Inserted chain {:#?}", chain_ethereum);
-
-    // let protocol_chain = &conn
-    //     .insert_protocol_chains(1, chain_ethereum.id)
-    //     .await
-    //     .expect("Failed to insert protocol_chain");
-    // println!("Inserted protocol_chain {:#?}", protocol_chain);
-
-    // let reserves_v1_csv: String = vec_addr_to_string(&reserves_v1).await;
-
-    // let snapshots = fetch_reserve_snapshots_aave_v1(&aave_parser_v1, &reserves_v1).await;
-
-    // let markets = &conn
-    //     .insert_markets(
-    //         protocol.id,
-    //         chain_ethereum.id,
-    //         &AAVE_V1_POOL.to_string(),
-    //         "lending",
-    //         &reserves_v1_csv,
-    //     )
-    //     .await
-    //     .expect("Failed to insert markets");
-    // println!("Inserted markets {:#?}", markets);
-
-    // for (reserve, total_liquidity, liquidity_rate_ray) in snapshots {
-    //     let row = conn
-    //         .insert_market_metrics_ts(
-    //             markets.id,
-    //             Some(&reserve.to_string()),
-    //             u256_to_bigdecimal(total_liquidity).await,
-    //             // TODO(volume): defer until USD-normalization lands; mixed-decimal sums are meaningless.
-    //             BigDecimal::from(0),
-    //             // apy_bps = apr_bps for now; revisit with continuous compounding (e^APR - 1) when V2/V3 land.
-    //             ray_to_bps(liquidity_rate_ray).await,
-    //             ray_to_bps(liquidity_rate_ray).await,
-    //             "aave_v1:getReserveData:ethereum",
-    //             "tier1",
-    //         )
-    //         .await
-    //         .expect("Failed to insert market_metrics_ts");
-    //     println!("Inserted market_metrics_ts {row:#?}");
-    // }
-
-    let defillama = DefiLlamaApiConnector::build_connection()
+    let conn = DBEngine::build_connection()
         .await
-        .expect("Failed to build DefiLlama connector");
-    println!(
-        "DefiLlama connected (pro tier: {})",
-        defillama.has_api_key()
-    );
-    let protocols = defillama
-        .get_protocols()
-        .await
-        .expect("Failed to call DefiLlama get_protocols");
-    println!("DefiLlama returned {} protocols", protocols.len());
+        .expect("Failed to connect to database");
+    println!("Database connection established: {:#?}", conn);
 
-    let path_protocol = "src/crates/defi_llama/data/protocol.txt";
-    let json = serde_json::to_string_pretty(&protocols)
-        .expect("Failed to serialize protocols to JSON");
-    std::fs::write(path_protocol, json).expect("Failed to write protocol file");
-    println!("Wrote {} protocols to {path_protocol}", protocols.len());
+    let _ = &conn
+        .delete_all_tables()
+        .await
+        .expect("Failed to delete all tables");
+
+    let _ = &conn.init_db().await.expect("Failed to initialize database");
+
+    let protocol = &conn
+        .insert_protocols(
+            "AAVEv1",
+            "AAVE-V1",
+            "Lending",
+            Some("src/crates/parser/aave/data/abi_aave_v1.json"),
+        )
+        .await
+        .expect("Failed to insert protocol");
+    println!("Inserted protocol {:#?}", protocol);
+
+    let chain_ethereum = &conn
+        .insert_chains("Ethereum", 1)
+        .await
+        .expect("Failed to insert chain");
+    println!("Inserted chain {:#?}", chain_ethereum);
+
+    let protocol_chain = &conn
+        .insert_protocol_chains(1, chain_ethereum.id)
+        .await
+        .expect("Failed to insert protocol_chain");
+    println!("Inserted protocol_chain {:#?}", protocol_chain);
+
+    let reserves_v1_csv: String = vec_addr_to_string(&reserves_v1).await;
+
+    let snapshots = fetch_reserve_snapshots_aave_v1(&aave_parser_v1, &reserves_v1).await;
+
+    let markets = &conn
+        .insert_markets(
+            protocol.id,
+            chain_ethereum.id,
+            &AAVE_V1_POOL.to_string(),
+            "lending",
+            &reserves_v1_csv,
+        )
+        .await
+        .expect("Failed to insert markets");
+    println!("Inserted markets {:#?}", markets);
+
+    for (reserve, total_liquidity, liquidity_rate_ray) in snapshots {
+        let (name_opt, symbol_opt, decimals_opt, total_supply_opt) = get_erc20_metadata(reserve, public_client.provider.clone()).await;
+        let row = conn
+            .insert_market_metrics_ts(
+                markets.id,
+                Some(&reserve.to_string()),
+                name_opt.as_deref(),
+                symbol_opt.as_deref(),
+                decimals_opt,
+                total_supply_opt,
+                u256_to_bigdecimal(total_liquidity).await,
+                // TODO(volume): defer until USD-normalization lands; mixed-decimal sums are meaningless.
+                BigDecimal::from(0),
+                // apy_bps = apr_bps for now; revisit with continuous compounding (e^APR - 1) when V2/V3 land.
+                ray_to_bps(liquidity_rate_ray).await,
+                ray_to_bps(liquidity_rate_ray).await,
+                "aave_v1:getReserveData:ethereum",
+                "tier1",
+            )
+            .await
+            .expect("Failed to insert market_metrics_ts");
+        println!("Inserted market_metrics_ts {row:#?}");
+    }
+
+    // let defillama = DefiLlamaApiConnector::build_connection()
+    //     .await
+    //     .expect("Failed to build DefiLlama connector");
+    // println!(
+    //     "DefiLlama connected (pro tier: {})",
+    //     defillama.has_api_key()
+    // );
+    // let protocols = defillama
+    //     .get_protocols()
+    //     .await
+    //     .expect("Failed to call DefiLlama get_protocols");
+    // println!("DefiLlama returned {} protocols", protocols.len());
+
+    // let path_protocol = "src/crates/defi_llama/data/protocol.txt";
+    // let json = serde_json::to_string_pretty(&protocols)
+    //     .expect("Failed to serialize protocols to JSON");
+    // std::fs::write(path_protocol, json).expect("Failed to write protocol file");
+    // println!("Wrote {} protocols to {path_protocol}", protocols.len());
 
     // let protocol_metrics_ts = &conn
     //     .insert_protocol_metrics_ts(protocol.id, 20, 30, "my granny", "good-one")

@@ -85,6 +85,10 @@ impl DBEngine {
         &self,
         market_id: i64,
         underlying: Option<&str>,
+        name: Option<&str>,
+        symbol: Option<&str>,
+        decimals: Option<i16>,
+        total_supply: Option<BigDecimal>,
         tvl_base: BigDecimal,
         volume_base: BigDecimal,
         apy_bps: i32,
@@ -95,12 +99,19 @@ impl DBEngine {
         let now = Utc::now();
 
         self.mutate_one(
-            "INSERT INTO market_metrics_ts (market_id, underlying, observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
-             RETURNING id, market_id, underlying, observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier",
+            "INSERT INTO market_metrics_ts \
+             (market_id, underlying, name, symbol, decimals, total_supply, \
+              observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
+             RETURNING id, market_id, underlying, name, symbol, decimals, total_supply, \
+                       observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier",
             |q| {
                 q.bind(market_id)
                     .bind(underlying.map(|s| s.to_owned()))
+                    .bind(name.map(|s| s.to_owned()))
+                    .bind(symbol.map(|s| s.to_owned()))
+                    .bind(decimals)
+                    .bind(total_supply)
                     .bind(now)
                     .bind(tvl_base)
                     .bind(volume_base)
