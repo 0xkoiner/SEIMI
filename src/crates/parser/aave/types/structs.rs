@@ -15,11 +15,11 @@ use crate::parser::aave::data::abi::AAVEv4CoreHub::{
 };
 
 /**
- * 
- * 
+ *
+ *
  * AAVE V1
- * 
- * 
+ *
+ *
  */
 #[derive(Debug)]
 pub struct ReserveDataV1 {
@@ -86,11 +86,11 @@ impl From<ReserveConfigurationDataV1Return> for ReserveConfigurationDataV1 {
 }
 
 /**
- * 
- * 
+ *
+ *
  * AAVE V2
- * 
- * 
+ *
+ *
  */
 #[derive(Debug)]
 pub struct ReserveDataV2 {
@@ -181,11 +181,11 @@ impl From<U256> for NormalizedVariableDebtV2 {
 }
 
 /**
- * 
- * 
+ *
+ *
  * AAVE V3
- * 
- * 
+ *
+ *
  */
 #[derive(Debug)]
 pub struct ReserveDataV3 {
@@ -340,11 +340,11 @@ impl From<u128> for VirtualUnderlyingBalanceV3 {
 }
 
 /**
- * 
- * 
+ *
+ *
  * AAVE V4
- * 
- * 
+ *
+ *
  */
 #[derive(Debug)]
 pub struct AssetV4 {

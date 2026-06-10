@@ -1,6 +1,11 @@
 use alloy::primitives::{Address, B256, U256};
+use sqlx::types::BigDecimal;
 
 use SEIMI::db::db_engine::sqlx_conn::DBEngine;
+use SEIMI::helpers::{
+    math::{calculate_average_apr_ray_aave_v1, ray_to_bps, u256_to_bigdecimal},
+    vectors::vec_addr_to_string,
+};
 use SEIMI::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool, AAVEv3Pool, AAVEv4CoreHub};
 use SEIMI::parser::aave::types::constants::{
     AAVE_V1_POOL, AAVE_V2_POOL, AAVE_V3_POOL, AAVE_V4_CORE_HUB,
@@ -22,45 +27,45 @@ async fn main() {
         )
         .init();
 
-    // let public_client = PublicClient::new_public_provider("mainnet", "ethereum")
-    //     .expect("Failed to create public client");
-    // println!("Public client {:#?}", public_client);
+    let public_client = PublicClient::new_public_provider("mainnet", "ethereum")
+        .expect("Failed to create public client");
+    println!("Public client {:#?}", public_client);
 
-    // // let aave_parser_v1 = AAVEv1Pool::new(AAVE_V1_POOL, public_client.provider.clone());
+    let aave_parser_v1 = AAVEv1Pool::new(AAVE_V1_POOL, public_client.provider.clone());
     // // let aave_parser_v2 = AAVEv2Pool::new(AAVE_V2_POOL, public_client.provider.clone());
     // // let aave_parser_v3: AAVEv3Pool::AAVEv3PoolInstance<alloy::providers::DynProvider> = AAVEv3Pool::new(AAVE_V3_POOL, public_client.provider.clone());
     // // let aave_hub_v4 = AAVEv4CoreHub::new(AAVE_V4_CORE_HUB, public_client.provider.clone());
 
-    // // let reserves_v1 = aave_parser_v1
-    // //     .getReserves()
-    // //     .call()
-    // //     .await
-    // //     .expect("Failed to call getReserves");
+    let reserves_v1 = aave_parser_v1
+        .getReserves()
+        .call()
+        .await
+        .expect("Failed to call getReserves");
 
-    // // println!("Reserves: {:#?}", reserves_v1);
+    println!("Reserves: {:#?}", reserves_v1);
 
-    // // for reserve in reserves_v1.clone() {
-    // //     let reserve_data: ReserveDataV1 = aave_parser_v1
-    // //         .getReserveData(reserve)
-    // //         .call()
-    // //         .await
-    // //         .expect("Failed to call getReserveData")
-    // //         .into();
-    // //     println!("Reserve: {:#?}, Data: {:#?}", reserve, reserve_data);
-    // // }
+    for reserve in reserves_v1.clone() {
+        let reserve_data: ReserveDataV1 = aave_parser_v1
+            .getReserveData(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveData")
+            .into();
+        println!("Reserve: {:#?}, Data: {:#?}", reserve, reserve_data);
+    }
 
-    // // for reserve in reserves_v1 {
-    // //     let reserve_config_data: ReserveConfigurationDataV1 = aave_parser_v1
-    // //         .getReserveConfigurationData(reserve)
-    // //         .call()
-    // //         .await
-    // //         .expect("Failed to call getReserveConfigurationData")
-    // //         .into();
-    // //     println!(
-    // //         "Reserve: {:#?}, Configuration Data: {:#?}",
-    // //         reserve, reserve_config_data
-    // //     );
-    // // }
+    // for reserve in reserves_v1 {
+    //     let reserve_config_data: ReserveConfigurationDataV1 = aave_parser_v1
+    //         .getReserveConfigurationData(reserve)
+    //         .call()
+    //         .await
+    //         .expect("Failed to call getReserveConfigurationData")
+    //         .into();
+    //     println!(
+    //         "Reserve: {:#?}, Configuration Data: {:#?}",
+    //         reserve, reserve_config_data
+    //     );
+    // }
 
     // // let reserves_v2 = aave_parser_v2
     // //     .getReservesList()
@@ -430,67 +435,82 @@ async fn main() {
         .expect("Failed to connect to database");
     println!("Database connection established: {:#?}", conn);
 
-    let _ = &conn.delete_all_tables().await.expect("Failed to delete all tables");
+    let _ = &conn
+        .delete_all_tables()
+        .await
+        .expect("Failed to delete all tables");
 
     let _ = &conn.init_db().await.expect("Failed to initialize database");
 
     let protocol = &conn
-        .insert_protocols("AAVE4", "AAVE-V3", "Lending", None)
+        .insert_protocols(
+            "AAVEv1",
+            "AAVE-V1",
+            "Lending",
+            Some("src/crates/parser/aave/data/abi_aave_v1.json"),
+        )
         .await
         .expect("Failed to insert protocol");
     println!("Inserted protocol {:#?}", protocol);
 
-    let chain = &conn
+    let chain_ethereum = &conn
         .insert_chains("Ethereum", 1)
         .await
         .expect("Failed to insert chain");
-    println!("Inserted chain {:#?}", chain);
-
-    let polygon = &conn
-        .ensure_chain("Polygon", 137)
-        .await
-        .expect("Failed to ensure chain");
-    println!("Ensured chain {:#?}", polygon);
+    println!("Inserted chain {:#?}", chain_ethereum);
 
     let protocol_chain = &conn
-        .insert_protocol_chains(1, polygon.id)
+        .insert_protocol_chains(1, chain_ethereum.id)
         .await
         .expect("Failed to insert protocol_chain");
     println!("Inserted protocol_chain {:#?}", protocol_chain);
 
+    let reserves_v1_csv: String = vec_addr_to_string(&reserves_v1).await;
+
+    let (avg_apr_ray, total_liquidity_sum) =
+        calculate_average_apr_ray_aave_v1(&aave_parser_v1, &reserves_v1).await;
+
     let markets = &conn
         .insert_markets(
             protocol.id,
-            chain.id,
-            "0x000000000001",
+            chain_ethereum.id,
+            &AAVE_V1_POOL.to_string(),
             "lending",
-            "0x000000000001,0x000000000002",
+            &reserves_v1_csv,
         )
         .await
         .expect("Failed to insert markets");
     println!("Inserted markets {:#?}", markets);
 
     let market_metrics_ts = &conn
-        .insert_market_metrics_ts(markets.id, 20, 30, 40, 50, "my granny", "good-one")
+        .insert_market_metrics_ts(
+            markets.id,
+            u256_to_bigdecimal(total_liquidity_sum).await,
+            BigDecimal::from(0), // TODO(volume): scan Deposit/Withdraw/Borrow/Repay events
+            ray_to_bps(avg_apr_ray).await, // apy_bps (TODO: compound)
+            ray_to_bps(avg_apr_ray).await, // apr_bps (supply, TVL-weighted)
+            "aave_v1:getReserveData:ethereum",
+            "tier1",
+        )
         .await
         .expect("Failed to insert market_metrics_ts");
     println!("Inserted market_metrics_ts {:#?}", market_metrics_ts);
 
-    let protocol_metrics_ts = &conn
-        .insert_protocol_metrics_ts(protocol.id, 20, 30, "my granny", "good-one")
-        .await
-        .expect("Failed to insert protocol_metrics_ts");
-    println!("Inserted protocol_metrics_ts {:#?}", protocol_metrics_ts);
+    // let protocol_metrics_ts = &conn
+    //     .insert_protocol_metrics_ts(protocol.id, 20, 30, "my granny", "good-one")
+    //     .await
+    //     .expect("Failed to insert protocol_metrics_ts");
+    // println!("Inserted protocol_metrics_ts {:#?}", protocol_metrics_ts);
 
-    let aggregate_metrics_ts = &conn
-        .insert_aggregate_metrics_ts(20, 30, 40, "my granny", "good-one")
-        .await
-        .expect("Failed to insert aggregate_metrics_ts");
-    println!("Inserted aggregate_metrics_ts {:#?}", aggregate_metrics_ts);
+    // let aggregate_metrics_ts = &conn
+    //     .insert_aggregate_metrics_ts(20, 30, 40, "my granny", "good-one")
+    //     .await
+    //     .expect("Failed to insert aggregate_metrics_ts");
+    // println!("Inserted aggregate_metrics_ts {:#?}", aggregate_metrics_ts);
 
-    let volume_rollups = &conn
-        .insert_volume_rollups("scope", 1, "window", 60)
-        .await
-        .expect("Failed to insert volume_rollups");
-    println!("Inserted volume_rollups {:#?}", volume_rollups);
+    // let volume_rollups = &conn
+    //     .insert_volume_rollups("scope", 1, "window", 60)
+    //     .await
+    //     .expect("Failed to insert volume_rollups");
+    // println!("Inserted volume_rollups {:#?}", volume_rollups);
 }

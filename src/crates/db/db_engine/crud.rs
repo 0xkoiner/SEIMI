@@ -1,3 +1,4 @@
+use sqlx::types::BigDecimal;
 use sqlx::types::chrono::Utc;
 
 use crate::db::db_engine::sqlx_conn::DBEngine;
@@ -83,8 +84,8 @@ impl DBEngine {
     pub async fn insert_market_metrics_ts(
         &self,
         market_id: i64,
-        tvl_base: i64,
-        volume_base: i64,
+        tvl_base: BigDecimal,
+        volume_base: BigDecimal,
         apy_bps: i32,
         apr_bps: i32,
         source: &str,
