@@ -15,3 +15,12 @@ pub struct ProtocolSummary {
     pub change_1d: Option<f64>,
     pub change_7d: Option<f64>,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PriceQuote {
+    pub decimals: Option<u8>,
+    pub price: f64,
+    pub symbol: String,
+    pub timestamp: f64,
+    pub confidence: Option<f64>,
+}

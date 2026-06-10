@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS market_metrics_ts (
     symbol TEXT,
     decimals SMALLINT,
     total_supply NUMERIC(78,0),
+    tvl_usd DOUBLE PRECISION,
     observed_at TIMESTAMPTZ NOT NULL,
     tvl_base NUMERIC(78,0) NOT NULL,
     volume_base NUMERIC(78,0) NOT NULL,

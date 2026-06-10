@@ -55,6 +55,7 @@ pub struct MarketMetricsTs {
     pub symbol: Option<String>,
     pub decimals: Option<i16>,
     pub total_supply: Option<BigDecimal>,
+    pub tvl_usd: Option<f64>,
     pub observed_at: DateTime<Utc>,
     pub tvl_base: BigDecimal,
     pub volume_base: BigDecimal,
