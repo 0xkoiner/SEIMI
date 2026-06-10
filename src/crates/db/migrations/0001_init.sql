@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS markets (
 CREATE TABLE IF NOT EXISTS market_metrics_ts (
     id BIGSERIAL PRIMARY KEY,
     market_id BIGINT NOT NULL REFERENCES markets(id) ON DELETE CASCADE,
+    underlying TEXT,
     observed_at TIMESTAMPTZ NOT NULL,
     tvl_base NUMERIC(78,0) NOT NULL,
     volume_base NUMERIC(78,0) NOT NULL,
@@ -77,5 +78,8 @@ CREATE TABLE IF NOT EXISTS volume_rollups (
 CREATE INDEX IF NOT EXISTS idx_markets_protocol ON markets(protocol_id);
 CREATE INDEX IF NOT EXISTS idx_markets_chain    ON markets(chain_id);
 CREATE INDEX IF NOT EXISTS idx_mkt_ts   ON market_metrics_ts(market_id, observed_at);
+CREATE INDEX IF NOT EXISTS idx_mkt_ts_underlying
+    ON market_metrics_ts(market_id, underlying, observed_at)
+    WHERE underlying IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_proto_ts ON protocol_metrics_ts(protocol_id, observed_at);
 CREATE INDEX IF NOT EXISTS idx_agg_ts   ON aggregate_metrics_ts(observed_at);

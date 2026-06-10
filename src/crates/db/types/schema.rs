@@ -50,6 +50,7 @@ pub struct Markets {
 pub struct MarketMetricsTs {
     pub id: i64,
     pub market_id: i64,
+    pub underlying: Option<String>,
     pub observed_at: DateTime<Utc>,
     pub tvl_base: BigDecimal,
     pub volume_base: BigDecimal,

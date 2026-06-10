@@ -138,3 +138,13 @@ Write the schema for:
 
 Written as **SQL that runs on both SQLite and Postgres**, so the Stage A → B migration is real and not aspirational. Timescale-specific bits (hypertable creation, continuous aggregates) layered as Stage-B-only migrations.
 ```
+
+---
+
+## 10. AaveV1 wiring caveats (current state)
+
+- `market_metrics_ts` is **per-reserve**: one row per `(market_id, underlying, observed_at)`. `underlying IS NULL` means a pool-aggregate row, not yet used for V1.
+- `tvl_base` per row is the reserve's raw `total_liquidity` in **token base units** (NUMERIC(78,0)). Summing across reserves requires USD normalization — pending a price oracle (Chainlink or DefiLlama).
+- `volume_base` is currently `0`. Event scanning (`Deposit` / `RedeemUnderlying` / `Borrow` / `Repay` from the V1 LendingPool) is deliberately deferred: without USD normalization, raw-amount volume sums are no more meaningful than raw-amount TVL sums.
+- `apr_bps` is the supply rate (`liquidity_rate`) for that reserve, converted RAY → BPS via `helpers::math::ray_to_bps`. `apy_bps` currently equals `apr_bps`; continuous compounding (`APY = e^APR − 1`) will be added when V2/V3 rates make the gap matter.
+- All V1 rows carry `source = "aave_v1:getReserveData:ethereum"` and `trust_tier = "tier1"` (on-chain via your own RPC), matching the trust model in `docs/plans/intel-plane/INTEL_PLANE.md`.
