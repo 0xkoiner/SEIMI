@@ -20,8 +20,8 @@ impl DBEngine {
 
         self.mutate_one(
             "INSERT INTO protocols (name, display_name, category, abi_ref, created_at, updated_at) \
-             VALUES ($1, $2, $3, $4, $5, $6) \
-             RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
+                VALUES ($1, $2, $3, $4, $5, $6) \
+                RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
             |q| {
                 q.bind(name.to_owned())
                     .bind(display_name.to_owned())
@@ -66,8 +66,8 @@ impl DBEngine {
 
         self.mutate_one(
             "INSERT INTO markets (protocol_id, chain_id, address, market_type, tokens, created_at) \
-             VALUES ($1, $2, $3, $4, $5, $6) \
-             RETURNING id, protocol_id, chain_id, address, market_type, tokens, created_at",
+                VALUES ($1, $2, $3, $4, $5, $6) \
+                RETURNING id, protocol_id, chain_id, address, market_type, tokens, created_at",
             |q| {
                 q.bind(protocol_id)
                     .bind(chain_id)
@@ -85,6 +85,11 @@ impl DBEngine {
         &self,
         market_id: i64,
         underlying: Option<&str>,
+        name: Option<&str>,
+        symbol: Option<&str>,
+        decimals: Option<i16>,
+        total_supply: Option<BigDecimal>,
+        tvl_usd: Option<f64>,
         tvl_base: BigDecimal,
         volume_base: BigDecimal,
         apy_bps: i32,
@@ -95,12 +100,20 @@ impl DBEngine {
         let now = Utc::now();
 
         self.mutate_one(
-            "INSERT INTO market_metrics_ts (market_id, underlying, observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
-             RETURNING id, market_id, underlying, observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier",
+            "INSERT INTO market_metrics_ts \
+                (market_id, underlying, name, symbol, decimals, total_supply, tvl_usd, \
+                observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier) \
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
+                RETURNING id, market_id, underlying, name, symbol, decimals, total_supply, tvl_usd, \
+                observed_at, tvl_base, volume_base, apy_bps, apr_bps, source, trust_tier",
             |q| {
                 q.bind(market_id)
                     .bind(underlying.map(|s| s.to_owned()))
+                    .bind(name.map(|s| s.to_owned()))
+                    .bind(symbol.map(|s| s.to_owned()))
+                    .bind(decimals)
+                    .bind(total_supply)
+                    .bind(tvl_usd)
                     .bind(now)
                     .bind(tvl_base)
                     .bind(volume_base)
@@ -125,8 +138,8 @@ impl DBEngine {
 
         self.mutate_one(
             "INSERT INTO protocol_metrics_ts (protocol_id, observed_at, tvl_base, volume_base, source, trust_tier) \
-             VALUES ($1, $2, $3, $4, $5, $6) \
-             RETURNING id, protocol_id, observed_at, tvl_base, volume_base, source, trust_tier",
+                VALUES ($1, $2, $3, $4, $5, $6) \
+                RETURNING id, protocol_id, observed_at, tvl_base, volume_base, source, trust_tier",
             |q| {
                 q.bind(protocol_id)
                     .bind(now)
@@ -151,8 +164,8 @@ impl DBEngine {
 
         self.mutate_one(
             "INSERT INTO aggregate_metrics_ts (observed_at, total_tvl_base, total_volume_base, protocol_count, source, trust_tier) \
-             VALUES ($1, $2, $3, $4, $5, $6) \
-             RETURNING id, observed_at, total_tvl_base, total_volume_base, protocol_count, source, trust_tier",
+                VALUES ($1, $2, $3, $4, $5, $6) \
+                RETURNING id, observed_at, total_tvl_base, total_volume_base, protocol_count, source, trust_tier",
             |q| {
                 q.bind(now)
                     .bind(total_tvl_base)
@@ -176,8 +189,8 @@ impl DBEngine {
 
         self.mutate_one(
             "INSERT INTO volume_rollups (scope, scope_id, window_label, volume_base, computed_at) \
-             VALUES ($1, $2, $3, $4, $5) \
-             RETURNING scope, scope_id, window_label, volume_base, computed_at",
+                VALUES ($1, $2, $3, $4, $5) \
+                RETURNING scope, scope_id, window_label, volume_base, computed_at",
             |q| {
                 q.bind(scope.to_owned())
                     .bind(scope_id)
@@ -379,8 +392,8 @@ impl DBEngine {
     pub async fn read_protocols_on_chain(&self, chain_id: i64) -> Result<Vec<Protocols>, DbError> {
         self.full_read::<Protocols, _>(
             "SELECT p.* FROM protocols p \
-             JOIN protocol_chains pc ON pc.protocol_id = p.id \
-             WHERE pc.chain_id = $1",
+                JOIN protocol_chains pc ON pc.protocol_id = p.id \
+                WHERE pc.chain_id = $1",
             |q| q.bind(chain_id),
         )
         .await
@@ -425,8 +438,8 @@ impl DBEngine {
         let now = Utc::now();
         self.mutate_one(
             "UPDATE protocols SET display_name = $1, category = $2, abi_ref = $3, updated_at = $4 \
-             WHERE id = $5 \
-             RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
+                WHERE id = $5 \
+                RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
             |q| {
                 q.bind(display_name.to_owned())
                     .bind(category.to_owned())
@@ -442,7 +455,7 @@ impl DBEngine {
         let now = Utc::now();
         self.mutate_one(
             "UPDATE protocols SET watch = $1, updated_at = $2 WHERE id = $3 \
-             RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
+                RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
             |q| q.bind(watch).bind(now).bind(id),
         )
         .await
@@ -456,7 +469,7 @@ impl DBEngine {
         let now = Utc::now();
         self.mutate_one(
             "UPDATE protocols SET capital_target = $1, updated_at = $2 WHERE id = $3 \
-             RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
+                RETURNING id, name, display_name, category, abi_ref, watch, capital_target, created_at, updated_at",
             |q| q.bind(capital_target).bind(now).bind(id),
         )
         .await
@@ -478,7 +491,7 @@ impl DBEngine {
     ) -> Result<Markets, DbError> {
         self.mutate_one(
             "UPDATE markets SET market_type = $1, tokens = $2 WHERE id = $3 \
-             RETURNING id, protocol_id, chain_id, address, market_type, tokens, created_at",
+                RETURNING id, protocol_id, chain_id, address, market_type, tokens, created_at",
             |q| {
                 q.bind(market_type.to_owned())
                     .bind(tokens.to_owned())
@@ -498,8 +511,8 @@ impl DBEngine {
         let now = Utc::now();
         self.mutate_one(
             "UPDATE volume_rollups SET volume_base = $1, computed_at = $2 \
-             WHERE scope = $3 AND scope_id = $4 AND window_label = $5 \
-             RETURNING scope, scope_id, window_label, volume_base, computed_at",
+                WHERE scope = $3 AND scope_id = $4 AND window_label = $5 \
+                RETURNING scope, scope_id, window_label, volume_base, computed_at",
             |q| {
                 q.bind(volume_base)
                     .bind(now)
@@ -556,12 +569,6 @@ impl DBEngine {
     }
 
     pub async fn delete_all_tables(&self) -> Result<u64, DbError> {
-        // Dev-stage reset: drop user tables AND sqlx's migration bookkeeping so the
-        // following init_db() can re-apply 0001_init.sql from scratch. We edit
-        // migrations in place during dev; without dropping _sqlx_migrations the
-        // sqlx migrator would raise VersionMismatch on the changed checksum, and
-        // without dropping the user tables their schemas would be stale (CREATE
-        // TABLE IF NOT EXISTS is a no-op on column additions).
         self.delete(
             "DROP TABLE IF EXISTS \
             aggregate_metrics_ts, protocol_metrics_ts, market_metrics_ts, \
@@ -576,8 +583,8 @@ impl DBEngine {
     pub async fn ensure_chain(&self, name: &str, chain_id: i64) -> Result<Chains, DbError> {
         self.mutate_one(
             "INSERT INTO chains (name, chain_id) VALUES ($1, $2) \
-             ON CONFLICT (chain_id) DO UPDATE SET name = EXCLUDED.name \
-             RETURNING id, name, chain_id",
+                ON CONFLICT (chain_id) DO UPDATE SET name = EXCLUDED.name \
+                RETURNING id, name, chain_id",
             |q| q.bind(name.to_owned()).bind(chain_id),
         )
         .await
@@ -593,7 +600,7 @@ impl DBEngine {
         for &chain_id in chain_ids {
             let result = sqlx::query_as::<_, ProtocolChains>(
                 "INSERT INTO protocol_chains (protocol_id, chain_id) VALUES ($1, $2) \
-                 RETURNING protocol_id, chain_id",
+                    RETURNING protocol_id, chain_id",
             )
             .bind(protocol_id)
             .bind(chain_id)

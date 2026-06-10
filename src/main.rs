@@ -2,13 +2,14 @@ use alloy::primitives::{Address, B256, U256};
 use sqlx::types::BigDecimal;
 
 use SEIMI::db::db_engine::sqlx_conn::DBEngine;
+use SEIMI::defi_llama::api_connector::DefiLlamaApiConnector;
 use SEIMI::helpers::{
-    math::{fetch_reserve_snapshots_aave_v1, ray_to_bps, u256_to_bigdecimal},
+    math::{compute_tvl_usd, fetch_reserve_snapshots_aave_v1, ray_to_bps, u256_to_bigdecimal},
     vectors::vec_addr_to_string,
 };
 use SEIMI::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool, AAVEv3Pool, AAVEv4CoreHub};
 use SEIMI::parser::aave::types::constants::{
-    AAVE_V1_POOL, AAVE_V2_POOL, AAVE_V3_POOL, AAVE_V4_CORE_HUB,
+    AAVE_V1_POOL, AAVE_V2_POOL, AAVE_V3_POOL, AAVE_V4_CORE_HUB, ETH_SENTINEL,
 };
 use SEIMI::parser::aave::types::structs::{
     AssetV4, LiquidationGracePeriodV3, NormalizedIncomeV2, NormalizedIncomeV3,
@@ -16,6 +17,8 @@ use SEIMI::parser::aave::types::structs::{
     ReserveConfigurationDataV2, ReserveConfigurationDataV3, ReserveDataV1, ReserveDataV2,
     ReserveDataV3, ReserveDeficitV3, SpokeConfigV4, SpokeDataV4, VirtualUnderlyingBalanceV3,
 };
+use SEIMI::parser::erc_tokens::data::abi::Erc20;
+use SEIMI::parser::erc_tokens::helpers::read::get_erc20_metadata;
 use SEIMI::public_client::client::public_client::PublicClient;
 
 #[tokio::main]
@@ -481,11 +484,55 @@ async fn main() {
         .expect("Failed to insert markets");
     println!("Inserted markets {:#?}", markets);
 
+    let defillama = DefiLlamaApiConnector::build_connection()
+        .await
+        .expect("Failed to build DefiLlama connector");
+    let mut prices = defillama
+        .get_prices_current("ethereum", &reserves_v1)
+        .await
+        .expect("Failed to fetch DefiLlama prices");
+
+    if let Some(eth_quote) = defillama
+        .get_price_by_coingecko_id("ethereum")
+        .await
+        .expect("Failed to fetch ETH price")
+    {
+        prices.insert(ETH_SENTINEL, eth_quote);
+    }
+    println!(
+        "DefiLlama priced {} of {} reserves",
+        prices.len(),
+        reserves_v1.len()
+    );
+
     for (reserve, total_liquidity, liquidity_rate_ray) in snapshots {
+        let (name_opt, symbol_opt, decimals_opt, total_supply_opt) = if reserve == ETH_SENTINEL {
+            (
+                Some("Ether".to_string()),
+                Some("ETH".to_string()),
+                Some(18_i16),
+                None,
+            )
+        } else {
+            get_erc20_metadata(reserve, public_client.provider.clone()).await
+        };
+
+        let tvl_usd_opt = match (decimals_opt, prices.get(&reserve)) {
+            (Some(dec), Some(quote)) => {
+                Some(compute_tvl_usd(total_liquidity, dec, quote.price).await)
+            }
+            _ => None,
+        };
+
         let row = conn
             .insert_market_metrics_ts(
                 markets.id,
                 Some(&reserve.to_string()),
+                name_opt.as_deref(),
+                symbol_opt.as_deref(),
+                decimals_opt,
+                total_supply_opt,
+                tvl_usd_opt,
                 u256_to_bigdecimal(total_liquidity).await,
                 // TODO(volume): defer until USD-normalization lands; mixed-decimal sums are meaningless.
                 BigDecimal::from(0),
@@ -499,6 +546,25 @@ async fn main() {
             .expect("Failed to insert market_metrics_ts");
         println!("Inserted market_metrics_ts {row:#?}");
     }
+
+    // let defillama = DefiLlamaApiConnector::build_connection()
+    //     .await
+    //     .expect("Failed to build DefiLlama connector");
+    // println!(
+    //     "DefiLlama connected (pro tier: {})",
+    //     defillama.has_api_key()
+    // );
+    // let protocols = defillama
+    //     .get_protocols()
+    //     .await
+    //     .expect("Failed to call DefiLlama get_protocols");
+    // println!("DefiLlama returned {} protocols", protocols.len());
+
+    // let path_protocol = "src/crates/defi_llama/data/protocol.txt";
+    // let json = serde_json::to_string_pretty(&protocols)
+    //     .expect("Failed to serialize protocols to JSON");
+    // std::fs::write(path_protocol, json).expect("Failed to write protocol file");
+    // println!("Wrote {} protocols to {path_protocol}", protocols.len());
 
     // let protocol_metrics_ts = &conn
     //     .insert_protocol_metrics_ts(protocol.id, 20, 30, "my granny", "good-one")
