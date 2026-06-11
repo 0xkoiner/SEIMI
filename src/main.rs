@@ -35,9 +35,9 @@ async fn main() {
     println!("Public client {:#?}", public_client);
 
     let aave_parser_v1 = AAVEv1Pool::new(AAVE_V1_POOL, public_client.provider.clone());
-    // // let aave_parser_v2 = AAVEv2Pool::new(AAVE_V2_POOL, public_client.provider.clone());
-    // // let aave_parser_v3: AAVEv3Pool::AAVEv3PoolInstance<alloy::providers::DynProvider> = AAVEv3Pool::new(AAVE_V3_POOL, public_client.provider.clone());
-    // // let aave_hub_v4 = AAVEv4CoreHub::new(AAVE_V4_CORE_HUB, public_client.provider.clone());
+    let aave_parser_v2 = AAVEv2Pool::new(AAVE_V2_POOL, public_client.provider.clone());
+    let aave_parser_v3: AAVEv3Pool::AAVEv3PoolInstance<alloy::providers::DynProvider> = AAVEv3Pool::new(AAVE_V3_POOL, public_client.provider.clone());
+    let aave_hub_v4 = AAVEv4CoreHub::new(AAVE_V4_CORE_HUB, public_client.provider.clone());
 
     let reserves_v1 = aave_parser_v1
         .getReserves()
@@ -70,11 +70,11 @@ async fn main() {
     //     );
     // }
 
-    // // let reserves_v2 = aave_parser_v2
-    // //     .getReservesList()
-    // //     .call()
-    // //     .await
-    // //     .expect("Failed to call getReservesList");
+    let reserves_v2 = aave_parser_v2
+        .getReservesList()
+        .call()
+        .await
+        .expect("Failed to call getReservesList");
 
     // // println!("Reserves: {:#?}", reserves_v2);
 
@@ -120,11 +120,11 @@ async fn main() {
     // //     );
     // // }
 
-    // // let reserves_v3 = aave_parser_v3
-    // //     .getReservesList()
-    // //     .call()
-    // //     .await
-    // //     .expect("Failed to call getReservesList");
+    let reserves_v3 = aave_parser_v3
+        .getReservesList()
+        .call()
+        .await
+        .expect("Failed to call getReservesList");
 
     // // println!("Reserves V3: {:#?}", reserves_v3);
 
@@ -193,21 +193,21 @@ async fn main() {
     // //     );
     // // }
 
-    // // let asset_id_v4 = U256::ZERO;
+    let asset_id_v4 = U256::ZERO;
 
-    // // let asset_v4: AssetV4 = aave_hub_v4
-    // //     .getAsset(asset_id_v4)
-    // //     .call()
-    // //     .await
-    // //     .expect("Failed to call getAsset")
-    // //     .into();
-    // // println!("V4 asset {:#?}: {:#?}", asset_id_v4, asset_v4);
+    let asset_v4: AssetV4 = aave_hub_v4
+        .getAsset(asset_id_v4)
+        .call()
+        .await
+        .expect("Failed to call getAsset")
+        .into();
+    println!("V4 asset {:#?}: {:#?}", asset_id_v4, asset_v4);
 
-    // // let underlying_listed_v4 = aave_hub_v4
-    // //     .isUnderlyingListed(asset_v4.underlying)
-    // //     .call()
-    // //     .await
-    // //     .expect("Failed to call isUnderlyingListed");
+    let underlying_listed_v4 = aave_hub_v4
+        .isUnderlyingListed(asset_v4.underlying)
+        .call()
+        .await
+        .expect("Failed to call isUnderlyingListed");
     // // let resolved_asset_id_v4 = aave_hub_v4
     // //     .getAssetId(asset_v4.underlying)
     // //     .call()
