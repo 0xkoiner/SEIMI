@@ -10,6 +10,10 @@ pub async fn u256_to_bigdecimal(u: U256) -> BigDecimal {
     BigDecimal::from_str(&u.to_string()).expect("U256 decimal string is valid")
 }
 
+pub async fn u256_to_u32(u: U256) -> u32 {
+    u32::try_from(u).unwrap_or(u32::MAX)
+}
+
 pub async fn ray_to_bps(ray: U256) -> i32 {
     let divisor = U256::from(10u64).pow(U256::from(23u64));
     i32::try_from(ray / divisor).unwrap_or(i32::MAX)
