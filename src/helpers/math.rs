@@ -3,8 +3,9 @@ use alloy::providers::DynProvider;
 use sqlx::types::BigDecimal;
 use std::str::FromStr;
 
-use crate::parser::aave::data::abi::AAVEv1Pool;
-use crate::parser::aave::types::structs::ReserveDataV1;
+use crate::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool};
+use crate::parser::aave::types::structs::{ReserveDataV1, ReserveDataV2};
+use crate::parser::erc_tokens::data::abi::Erc20;
 
 pub async fn u256_to_bigdecimal(u: U256) -> BigDecimal {
     BigDecimal::from_str(&u.to_string()).expect("U256 decimal string is valid")
@@ -38,6 +39,34 @@ pub async fn fetch_reserve_snapshots_aave_v1(
             .expect("Failed to call getReserveData")
             .into();
         out.push((reserve, rd.total_liquidity, rd.liquidity_rate));
+    }
+    out
+}
+
+pub async fn fetch_reserve_snapshots_aave_v2(
+    aave_parser_v2: &AAVEv2Pool::AAVEv2PoolInstance<DynProvider>,
+    provider: DynProvider,
+    reserves: &[Address],
+) -> Vec<(Address, U256, U256)> {
+    let mut out = Vec::with_capacity(reserves.len());
+    for reserve in reserves.iter().copied() {
+        let rd: ReserveDataV2 = aave_parser_v2
+            .getReserveData(reserve)
+            .call()
+            .await
+            .expect("Failed to call getReserveData (v2)")
+            .into();
+
+        let atoken = Erc20::new(rd.a_token_address, provider.clone());
+        let total_liquidity = atoken
+            .totalSupply()
+            .call()
+            .await
+            .expect("Failed to call aToken.totalSupply (v2)");
+
+        let liquidity_rate = U256::from(rd.current_liquidity_rate);
+
+        out.push((reserve, total_liquidity, liquidity_rate));
     }
     out
 }
