@@ -1,4 +1,8 @@
-use SEIMI::parser::utils::parse_aave_onchain::parser_underlying_reserves_aave_v1;
+use SEIMI::db::utils::insert_aave::{insert_aave_v1, insert_aave_v2, insert_aave_v3};
+use SEIMI::parser::utils::parse_aave_onchain::{
+    parse_reserve_data_aave_v1, parser_underlying_reserves_aave_v1,
+    parser_underlying_reserves_aave_v2, parser_underlying_reserves_aave_v3,
+};
 use alloy::primitives::{Address, B256, U256};
 use sqlx::types::BigDecimal;
 
@@ -41,9 +45,9 @@ async fn main() {
     let aave_parser_v3: AAVEv3Pool::AAVEv3PoolInstance<alloy::providers::DynProvider> =
         AAVEv3Pool::new(AAVE_V3_POOL, public_client.provider.clone());
     let aave_hub_v4 = AAVEv4CoreHub::new(AAVE_V4_CORE_HUB, public_client.provider.clone());
-    
+
     let reserves_list = parser_underlying_reserves_aave_v1(&aave_parser_v1).await;
-    let reserves_v1 = parser_underlying_reserves_aave_v1(&aave_parser_v1).await;
+    let reserves_v1 = parse_reserve_data_aave_v1(&reserves_list, &aave_parser_v1).await;
     // let reserves_v1 = aave_parser_v1
     //     .getReserves()
     //     .call()
@@ -450,108 +454,43 @@ async fn main() {
 
     let _ = &conn.init_db().await.expect("Failed to initialize database");
 
-    let protocol = &conn
-        .insert_protocols(
-            "AAVEv1",
-            "AAVE-V1",
-            "Lending",
-            Some("src/crates/parser/aave/data/abi_aave_v1.json"),
-        )
-        .await
-        .expect("Failed to insert protocol");
-    println!("Inserted protocol {:#?}", protocol);
-
     let chain_ethereum = &conn
         .insert_chains("Ethereum", 1)
         .await
         .expect("Failed to insert chain");
     println!("Inserted chain {:#?}", chain_ethereum);
 
-    let protocol_chain = &conn
-        .insert_protocol_chains(1, chain_ethereum.id)
-        .await
-        .expect("Failed to insert protocol_chain");
-    println!("Inserted protocol_chain {:#?}", protocol_chain);
+    insert_aave_v1(
+        &conn,
+        chain_ethereum.id,
+        aave_parser_v1,
+        &public_client.provider,
+        &reserves_list,
+    )
+    .await;
 
-    let reserves_v1_csv: String = vec_addr_to_string(&reserves_v1).await;
+    let reserves_list_v2 = parser_underlying_reserves_aave_v2(&aave_parser_v2).await;
 
-    let snapshots = fetch_reserve_snapshots_aave_v1(&aave_parser_v1, &reserves_v1).await;
+    insert_aave_v2(
+        &conn,
+        chain_ethereum.id,
+        aave_parser_v2,
+        &public_client.provider,
+        &reserves_list_v2,
+    )
+    .await;
 
-    let markets = &conn
-        .insert_markets(
-            protocol.id,
-            chain_ethereum.id,
-            &AAVE_V1_POOL.to_string(),
-            "lending",
-            &reserves_v1_csv,
-        )
-        .await
-        .expect("Failed to insert markets");
-    println!("Inserted markets {:#?}", markets);
+    let reserves_list_v3 = parser_underlying_reserves_aave_v3(&aave_parser_v3).await;
 
-    let defillama = DefiLlamaApiConnector::build_connection()
-        .await
-        .expect("Failed to build DefiLlama connector");
-    let mut prices = defillama
-        .get_prices_current("ethereum", &reserves_v1)
-        .await
-        .expect("Failed to fetch DefiLlama prices");
-
-    if let Some(eth_quote) = defillama
-        .get_price_by_coingecko_id("ethereum")
-        .await
-        .expect("Failed to fetch ETH price")
-    {
-        prices.insert(ETH_SENTINEL, eth_quote);
-    }
-    println!(
-        "DefiLlama priced {} of {} reserves",
-        prices.len(),
-        reserves_v1.len()
-    );
-
-    for (reserve, total_liquidity, liquidity_rate_ray) in snapshots {
-        let (name_opt, symbol_opt, decimals_opt, total_supply_opt) = if reserve == ETH_SENTINEL {
-            (
-                Some("Ether".to_string()),
-                Some("ETH".to_string()),
-                Some(18_i16),
-                None,
-            )
-        } else {
-            get_erc20_metadata(reserve, public_client.provider.clone()).await
-        };
-
-        let tvl_usd_opt = match (decimals_opt, prices.get(&reserve)) {
-            (Some(dec), Some(quote)) => {
-                Some(compute_tvl_usd(total_liquidity, dec, quote.price).await)
-            }
-            _ => None,
-        };
-
-        let row = conn
-            .insert_market_metrics_ts(
-                markets.id,
-                Some(&reserve.to_string()),
-                name_opt.as_deref(),
-                symbol_opt.as_deref(),
-                decimals_opt,
-                total_supply_opt,
-                tvl_usd_opt,
-                u256_to_bigdecimal(total_liquidity).await,
-                // TODO(volume): defer until USD-normalization lands; mixed-decimal sums are meaningless.
-                BigDecimal::from(0),
-                // apy_bps = apr_bps for now; revisit with continuous compounding (e^APR - 1) when V2/V3 land.
-                ray_to_bps(liquidity_rate_ray).await,
-                ray_to_bps(liquidity_rate_ray).await,
-                "aave_v1:getReserveData:ethereum",
-                "tier1",
-            )
-            .await
-            .expect("Failed to insert market_metrics_ts");
-        println!("Inserted market_metrics_ts {row:#?}");
-    }
-
+    insert_aave_v3(
+        &conn,
+        chain_ethereum.id,
+        aave_parser_v3,
+        &public_client.provider,
+        &reserves_list_v3
+        ,
+    )
+    .await;
     // let defillama = DefiLlamaApiConnector::build_connection()
     //     .await
     //     .expect("Failed to build DefiLlama connector");

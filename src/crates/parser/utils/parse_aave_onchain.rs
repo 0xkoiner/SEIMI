@@ -3,13 +3,8 @@ use alloy::providers::DynProvider;
 
 use crate::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool, AAVEv3Pool, AAVEv4CoreHub};
 use crate::parser::aave::types::structs::{
-    AssetV4, 
-    ReserveConfigurationDataV1, 
-    ReserveConfigurationDataV2,
-    ReserveConfigurationDataV3,
-    ReserveDataV1, 
-    ReserveDataV2,
-    ReserveDataV3,
+    AssetV4, ReserveConfigurationDataV1, ReserveConfigurationDataV2, ReserveConfigurationDataV3,
+    ReserveDataV1, ReserveDataV2, ReserveDataV3,
 };
 
 pub async fn parser_underlying_reserves_aave_v1(
