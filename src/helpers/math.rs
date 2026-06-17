@@ -3,8 +3,8 @@ use alloy::providers::DynProvider;
 use sqlx::types::BigDecimal;
 use std::str::FromStr;
 
-use crate::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool, AAVEv3Pool};
-use crate::parser::aave::types::structs::{ReserveDataV1, ReserveDataV2, ReserveDataV3};
+use crate::parser::aave::data::abi::{AAVEv1Pool, AAVEv2Pool, AAVEv3Pool, AAVEv4CoreHub};
+use crate::parser::aave::types::structs::{AssetV4, ReserveDataV1, ReserveDataV2, ReserveDataV3};
 use crate::parser::erc_tokens::data::abi::Erc20;
 
 pub async fn u256_to_bigdecimal(u: U256) -> BigDecimal {
@@ -71,7 +71,6 @@ pub async fn fetch_reserve_snapshots_aave_v2(
     out
 }
 
-
 pub async fn fetch_reserve_snapshots_aave_v3(
     aave_parser_v3: &AAVEv3Pool::AAVEv3PoolInstance<DynProvider>,
     provider: DynProvider,
@@ -96,6 +95,45 @@ pub async fn fetch_reserve_snapshots_aave_v3(
         let liquidity_rate = U256::from(rd.current_liquidity_rate);
 
         out.push((reserve, total_liquidity, liquidity_rate));
+    }
+    out
+}
+
+pub async fn fetch_reserve_snapshots_aave_v4(
+    aave_parser_v4: &AAVEv4CoreHub::AAVEv4CoreHubInstance<DynProvider>,
+    assets: &Vec<AssetV4>,
+) -> Vec<(Address, U256, U256)> {
+    let bps_max = U256::from(10_000u32);
+
+    let mut out = Vec::with_capacity(assets.len());
+    for asset in assets.iter() {
+        let total_liquidity = aave_parser_v4
+            .getAddedAssets(asset.asset_id)
+            .call()
+            .await
+            .expect("Failed to call getAddedAssets (v4)");
+
+        let total_owed = aave_parser_v4
+            .getAssetTotalOwed(asset.asset_id)
+            .call()
+            .await
+            .expect("Failed to call getAssetTotalOwed (v4)");
+
+        let drawn_rate = aave_parser_v4
+            .getAssetDrawnRate(asset.asset_id)
+            .call()
+            .await
+            .expect("Failed to call getAssetDrawnRate (v4)");
+
+        let supply_rate_ray = if total_liquidity.is_zero() {
+            U256::ZERO
+        } else {
+            let one_minus_fee = bps_max - U256::from(asset.liquidity_fee);
+            let weighted = (drawn_rate * total_owed) / total_liquidity;
+            (weighted * one_minus_fee) / bps_max
+        };
+
+        out.push((asset.underlying, total_liquidity, supply_rate_ray));
     }
     out
 }

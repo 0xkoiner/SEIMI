@@ -121,7 +121,7 @@ pub async fn parse_reserve_data_aave_v3(
 
 pub async fn parser_assets_hub_aave_v4(
     parser: &AAVEv4CoreHub::AAVEv4CoreHubInstance<DynProvider>,
-) -> Vec<AssetV4> {
+) -> (Vec<AssetV4>, Vec<Address>) {
     let asset_count = parser
         .getAssetCount()
         .call()
@@ -130,17 +130,20 @@ pub async fn parser_assets_hub_aave_v4(
 
     let mut asset_id = U256::ZERO;
     let mut assets: Vec<AssetV4> = vec![];
+    let mut assets_addresses: Vec<Address> = vec![];
 
     while asset_id < asset_count {
-        let asset: AssetV4 = parser
+        let mut asset: AssetV4 = parser
             .getAsset(asset_id)
             .call()
             .await
             .expect("Failed to call getAsset")
             .into();
+        asset.asset_id = asset_id;
+        assets_addresses.push(asset.underlying.clone());
         assets.push(asset);
         asset_id += U256::ONE;
     }
 
-    assets
+    (assets, assets_addresses)
 }

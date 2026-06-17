@@ -348,6 +348,7 @@ impl From<u128> for VirtualUnderlyingBalanceV3 {
  */
 #[derive(Debug)]
 pub struct AssetV4 {
+    pub asset_id: U256,
     pub liquidity: U120,
     pub realized_fees: U120,
     pub decimals: u8,
@@ -370,6 +371,7 @@ pub struct AssetV4 {
 impl From<AssetV4Return> for AssetV4 {
     fn from(r: AssetV4Return) -> Self {
         Self {
+            asset_id: U256::ZERO,
             liquidity: r.liquidity,
             realized_fees: r.realizedFees,
             decimals: r.decimals,
