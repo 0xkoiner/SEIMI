@@ -1,7 +1,7 @@
-use SEIMI::db::utils::insert_aave::{insert_aave_v1, insert_aave_v2, insert_aave_v3};
+use SEIMI::db::utils::insert_aave::{insert_aave_v1, insert_aave_v2, insert_aave_v3, insert_aave_v4};
 use SEIMI::parser::utils::parse_aave_onchain::{
     parse_reserve_data_aave_v1, parser_underlying_reserves_aave_v1,
-    parser_underlying_reserves_aave_v2, parser_underlying_reserves_aave_v3,
+    parser_underlying_reserves_aave_v2, parser_underlying_reserves_aave_v3, parser_assets_hub_aave_v4
 };
 use alloy::primitives::{Address, B256, U256};
 use sqlx::types::BigDecimal;
@@ -487,10 +487,21 @@ async fn main() {
         chain_ethereum.id,
         aave_parser_v3,
         &public_client.provider,
-        &reserves_list_v3
-        ,
+        &reserves_list_v3,
     )
     .await;
+
+    let (assets_v4, reserves_list_v4) = parser_assets_hub_aave_v4(&aave_hub_v4).await;
+
+    insert_aave_v4(
+        &conn, 
+        chain_ethereum.id,
+        aave_hub_v4, 
+        &public_client.provider, 
+        &assets_v4, 
+        &reserves_list_v4
+    )
+    .await
     // let defillama = DefiLlamaApiConnector::build_connection()
     //     .await
     //     .expect("Failed to build DefiLlama connector");
